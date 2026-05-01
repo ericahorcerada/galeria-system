@@ -104,7 +104,7 @@ export function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.25 }}
-              className="font-serif text-5xl font-light leading-[0.95] text-white sm:text-6xl md:text-7xl lg:text-8xl"
+              className="font-serif text-[42px] font-light leading-[1.05] tracking-[-0.03em] text-white sm:text-[56px] md:text-[68px] lg:text-[76px]"
             >
               {settings.title}
               <span className="block text-[#d9b878]">{settings.highlight}</span>
