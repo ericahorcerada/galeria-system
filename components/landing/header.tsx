@@ -49,7 +49,6 @@ export function Header() {
 
     async function loadUser() {
       try {
-        // 1. Check old/local login system first.
         const response = await fetch("/api/auth/me", {
           cache: "no-store",
           headers: { "Cache-Control": "no-cache" },
@@ -67,7 +66,6 @@ export function Header() {
           }
         }
 
-        // 2. Check Google login session.
         const googleSession = await getSession();
 
         if (googleSession?.user?.email && isMounted) {
@@ -126,7 +124,14 @@ export function Header() {
     ? "text-foreground/80 hover:text-foreground"
     : "text-white/90 hover:text-white";
 
-  const profileHref = user?.role === "admin" ? "/admin" : user?.role === "staff" ? "/staff" : "/customer/dashboard";
+  const profileHref =
+    user?.role === "admin"
+      ? "/admin"
+      : user?.role === "staff"
+        ? "/staff"
+        : user?.provider === "google"
+          ? "/shop"
+          : "/customer/dashboard";
 
   return (
     <>
