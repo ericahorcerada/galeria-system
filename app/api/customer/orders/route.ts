@@ -82,7 +82,6 @@ export async function GET() {
     const pool = getPool();
 
     const values: Array<string | number> = [];
-
     let whereClause = "";
 
     if (customer.customerId) {
@@ -169,7 +168,10 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Unable to load customer orders.",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to load customer orders.",
       },
       { status: 500 }
     );

@@ -26,7 +26,7 @@ type CheckoutFormData = {
   paymentMethod: "cod" | "gcash" | "maya" | "bank_transfer";
 };
 
-const SHIPPING_FEE = 500;
+const SHIPPING_FEE = 50;
 const TAX_RATE = 0.12;
 
 const initialCheckoutForm: CheckoutFormData = {

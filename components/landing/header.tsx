@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ShoppingBag,
-  Search,
   Menu,
   X,
   User,
@@ -70,7 +69,7 @@ export function Header() {
           if (result.user && isMounted) {
             setUser({
               ...result.user,
-              provider: "local",
+              provider: result.user.provider || "local",
             });
             return;
           }
@@ -115,7 +114,7 @@ export function Header() {
         cache: "no-store",
       });
     } catch {
-      // Ignore old logout errors so Google logout can still continue.
+      // Continue logout.
     }
 
     localStorage.removeItem("galeria_user");
@@ -135,11 +134,11 @@ export function Header() {
     : "text-white/90 hover:text-white";
 
   const profileHref =
-  user?.role === "admin"
-    ? "/admin"
-    : user?.role === "staff"
-      ? "/staff"
-      : "/profile";
+    user?.role === "admin"
+      ? "/admin"
+      : user?.role === "staff"
+        ? "/staff"
+        : "/profile";
 
   return (
     <>
@@ -200,14 +199,6 @@ export function Header() {
 
             <div className="flex min-w-0 items-center justify-end">
               <div className="ml-1 flex shrink-0 items-center gap-1 sm:ml-2">
-                <Link
-                  href="/shop"
-                  className={`relative z-20 hidden h-10 w-10 items-center justify-center rounded-full transition-colors sm:flex ${iconTextClass}`}
-                  aria-label="Search artworks"
-                >
-                  <Search className="h-5 w-5" />
-                </Link>
-
                 <button
                   onClick={toggleTheme}
                   className={`relative z-20 hidden h-10 w-10 items-center justify-center rounded-full transition-colors sm:flex ${iconTextClass}`}
@@ -221,7 +212,7 @@ export function Header() {
                     <Link href={profileHref}>
                       <button
                         className={`flex h-10 items-center gap-2 rounded-full px-3 text-xs font-medium transition-colors ${iconTextClass}`}
-                        aria-label="Account dashboard"
+                        aria-label="Account profile"
                       >
                         {user.role === "admin" ? (
                           <LayoutDashboard className="h-4 w-4" />
