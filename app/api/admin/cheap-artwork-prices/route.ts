@@ -73,7 +73,6 @@ export async function GET(request: Request) {
 
     for (let i = 0; i < artworks.length; i++) {
       const artwork = artworks[i];
-
       const newPrice = cheapPrices[i] || 399;
       const newMedium = cheapMediums[i % cheapMediums.length];
 
