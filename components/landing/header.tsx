@@ -3,7 +3,17 @@
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ShoppingBag, Search, Menu, X, User, Moon, Sun, LogOut, LayoutDashboard } from "lucide-react";
+import {
+  ShoppingBag,
+  Search,
+  Menu,
+  X,
+  User,
+  Moon,
+  Sun,
+  LogOut,
+  LayoutDashboard,
+} from "lucide-react";
 import { getSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { useDarkMode } from "@/contexts/dark-mode-context";
@@ -129,15 +139,15 @@ export function Header() {
       ? "/admin"
       : user?.role === "staff"
         ? "/staff"
-        : user?.provider === "google"
-          ? "/shop"
-          : "/customer/dashboard";
+        : "/customer/dashboard";
 
   return (
     <>
       <motion.header
         className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
-          useLightHeader ? "border-b border-border bg-background/95 shadow-sm backdrop-blur-sm" : "bg-transparent"
+          useLightHeader
+            ? "border-b border-border bg-background/95 shadow-sm backdrop-blur-sm"
+            : "bg-transparent"
         }`}
         initial={{ y: -100 }}
         animate={{ y: 0 }}
@@ -213,7 +223,11 @@ export function Header() {
                         className={`flex h-10 items-center gap-2 rounded-full px-3 text-xs font-medium transition-colors ${iconTextClass}`}
                         aria-label="Account dashboard"
                       >
-                        {user.role === "admin" ? <LayoutDashboard className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                        {user.role === "admin" ? (
+                          <LayoutDashboard className="h-4 w-4" />
+                        ) : (
+                          <User className="h-4 w-4" />
+                        )}
                         <span className="hidden max-w-28 truncate 2xl:inline">{user.name}</span>
                       </button>
                     </Link>
@@ -266,8 +280,14 @@ export function Header() {
         transition={{ duration: 0.2 }}
       >
         <div className="flex h-16 items-center justify-between border-b border-border px-4 sm:px-6">
-          <span className="font-serif text-2xl font-light tracking-[0.2em] text-foreground">GALERIA</span>
-          <button className="-mr-2 p-2" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu">
+          <span className="font-serif text-2xl font-light tracking-[0.2em] text-foreground">
+            GALERIA
+          </span>
+          <button
+            className="-mr-2 p-2"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Close menu"
+          >
             <X className="h-5 w-5 text-foreground" />
           </button>
         </div>
@@ -310,7 +330,11 @@ export function Header() {
                   <Button className="h-12 px-8 text-sm tracking-wide">{user.name}</Button>
                 </Link>
 
-                <Button variant="outline" className="h-12 px-8 text-sm tracking-wide" onClick={handleSignOut}>
+                <Button
+                  variant="outline"
+                  className="h-12 px-8 text-sm tracking-wide"
+                  onClick={handleSignOut}
+                >
                   Logout
                 </Button>
               </>
