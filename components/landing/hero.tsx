@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -27,8 +27,8 @@ type HomepageData = {
 const DEFAULT_HOMEPAGE: Required<HomepageData> = {
   smallLabel: "BUTUAN CITY ART GALLERY",
   mainTitle: "GALERIA",
-  highlightedTitle: "Timeless pieces for every meaningful space.",
-  highlightedTitleLine: "Timeless pieces for every meaningful space.",
+  highlightedTitle: "",
+  highlightedTitleLine: "",
   description:
     "Discover elegant artworks, framed prints, and curated collections made for homes, offices, and creative spaces.",
   primaryButtonText: "Shop Live Collection",
@@ -113,28 +113,8 @@ function normalizeHomepageData(rawData: unknown): Required<HomepageData> {
       ["mainTitle", "main_title", "title", "heroTitle", "hero_title"],
       DEFAULT_HOMEPAGE.mainTitle
     ),
-    highlightedTitle: getValue(
-      source,
-      [
-        "highlightedTitle",
-        "highlighted_title",
-        "highlightedTitleLine",
-        "highlighted_title_line",
-        "subtitle",
-      ],
-      DEFAULT_HOMEPAGE.highlightedTitle
-    ),
-    highlightedTitleLine: getValue(
-      source,
-      [
-        "highlightedTitleLine",
-        "highlighted_title_line",
-        "highlightedTitle",
-        "highlighted_title",
-        "subtitle",
-      ],
-      DEFAULT_HOMEPAGE.highlightedTitleLine
-    ),
+    highlightedTitle: "",
+    highlightedTitleLine: "",
     description: getValue(
       source,
       ["description", "heroDescription", "hero_description"],
@@ -231,14 +211,6 @@ export function Hero() {
     };
   }, []);
 
-  const highlightedWords = useMemo(() => {
-    return (
-      homepage.highlightedTitleLine ||
-      homepage.highlightedTitle ||
-      DEFAULT_HOMEPAGE.highlightedTitle
-    );
-  }, [homepage.highlightedTitle, homepage.highlightedTitleLine]);
-
   const showBackgroundImage =
     isUsableImageUrl(homepage.backgroundImageUrl) && !backgroundFailed;
 
@@ -268,23 +240,22 @@ export function Hero() {
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.75 }}
-            className="max-w-3xl"
+            className="max-w-2xl"
           >
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white/90 backdrop-blur-md">
               <Sparkles className="h-3.5 w-3.5 text-[#e0bd76]" />
               {homepage.smallLabel}
             </div>
 
-            <h1 className="font-serif text-[34px] font-light leading-[1.05] tracking-[-0.02em] text-white sm:text-[42px] md:text-[52px] lg:text-[62px]">              {homepage.mainTitle}
-              <br />
-              <span className="text-[#d8b26a]">{highlightedWords}</span>
+            <h1 className="font-serif text-[38px] font-light leading-tight tracking-[-0.02em] text-[#d8b26a] sm:text-[48px] md:text-[58px] lg:text-[68px]">
+              {homepage.mainTitle}
             </h1>
 
             <p className="mt-6 max-w-xl text-sm leading-7 text-white/85 md:text-base">
               {homepage.description}
             </p>
 
-            <div className="mt-9 flex flex-col gap-4 sm:flex-row">
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
               <Button
                 asChild
                 size="lg"
@@ -315,7 +286,7 @@ export function Hero() {
             transition={{ duration: 0.75, delay: 0.15 }}
             className="hidden justify-center lg:flex"
           >
-            <div className="w-full max-w-[420px] rounded-[2rem] border border-white/20 bg-white/10 p-5 shadow-2xl backdrop-blur-md">
+            <div className="w-full max-w-[380px] rounded-[2rem] border border-white/20 bg-white/10 p-5 shadow-2xl backdrop-blur-md">
               <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#8b551c] via-[#d0993b] to-[#241107]">
                 {showFeaturedImage ? (
                   <img
@@ -327,7 +298,7 @@ export function Hero() {
                 ) : (
                   <div className="flex h-full w-full items-center justify-center p-8 text-center">
                     <div>
-                      <p className="font-serif text-3xl text-white">
+                      <p className="font-serif text-2xl text-white">
                         {homepage.featuredTitle}
                       </p>
                       <p className="mt-3 text-sm text-white/75">
@@ -340,7 +311,7 @@ export function Hero() {
 
               <div className="mt-5 flex items-end justify-between gap-4">
                 <div>
-                  <h2 className="font-serif text-2xl text-white">
+                  <h2 className="font-serif text-xl text-white">
                     {homepage.featuredTitle}
                   </h2>
                   <p className="mt-1 line-clamp-2 text-sm leading-6 text-white/70">
