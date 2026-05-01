@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -180,7 +179,8 @@ function normalizeHomepageData(rawData: unknown): Required<HomepageData> {
 
 export function Hero() {
   const [homepage, setHomepage] = useState<Required<HomepageData>>(DEFAULT_HOMEPAGE);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [backgroundLoaded, setBackgroundLoaded] = useState(false);
+  const [featuredLoaded, setFeaturedLoaded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -217,32 +217,31 @@ export function Hero() {
   }, []);
 
   const highlightedWords = useMemo(() => {
-    const text =
+    return (
       homepage.highlightedTitleLine ||
       homepage.highlightedTitle ||
-      DEFAULT_HOMEPAGE.highlightedTitle;
-
-    return text;
+      DEFAULT_HOMEPAGE.highlightedTitle
+    );
   }, [homepage.highlightedTitle, homepage.highlightedTitleLine]);
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-[#120800] text-white">
       <div className="absolute inset-0">
-        <Image
+        <img
           src={homepage.backgroundImageUrl}
           alt="Galeria background artwork"
-          fill
-          priority
-          sizes="100vw"
-          className={`object-cover transition-opacity duration-700 ${
-            imageLoaded ? "opacity-100" : "opacity-0"
+          className={`h-full w-full object-cover transition-opacity duration-700 ${
+            backgroundLoaded ? "opacity-100" : "opacity-100"
           }`}
-          onLoad={() => setImageLoaded(true)}
+          onLoad={() => setBackgroundLoaded(true)}
+          onError={(event) => {
+            event.currentTarget.src = DEFAULT_HOMEPAGE.backgroundImageUrl;
+          }}
         />
 
-        <div className="absolute inset-0 bg-black/55" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/30" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+        <div className="absolute inset-0 bg-black/45" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/10" />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-center px-6 pb-16 pt-28 lg:px-8">
@@ -301,13 +300,16 @@ export function Hero() {
           >
             <div className="w-full max-w-[420px] rounded-[2rem] border border-white/20 bg-white/10 p-5 shadow-2xl backdrop-blur-md">
               <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-black/20">
-                <Image
+                <img
                   src={homepage.featuredImageUrl}
                   alt={homepage.featuredTitle}
-                  fill
-                  sizes="420px"
-                  className="object-cover"
-                  priority
+                  className={`h-full w-full object-cover transition-opacity duration-700 ${
+                    featuredLoaded ? "opacity-100" : "opacity-100"
+                  }`}
+                  onLoad={() => setFeaturedLoaded(true)}
+                  onError={(event) => {
+                    event.currentTarget.src = DEFAULT_HOMEPAGE.featuredImageUrl;
+                  }}
                 />
               </div>
 
