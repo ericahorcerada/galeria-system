@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { query } from "@/lib/db";
+import { executeQuery } from "@/lib/db";
 
 function splitName(fullName: string | null | undefined) {
   const clean = (fullName || "Google User").trim();
@@ -25,7 +25,7 @@ const handler = NextAuth({
       const email = user.email.toLowerCase();
       const { firstName, lastName } = splitName(user.name);
 
-      await query(
+      await executeQuery(
         `INSERT INTO customers (first_name, last_name, email, password_hash, phone, created_at)
          VALUES (?, ?, ?, ?, ?, NOW())
          ON DUPLICATE KEY UPDATE
