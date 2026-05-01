@@ -45,7 +45,7 @@ async function getCustomerIdentity() {
   if (localSession?.role === "customer") {
     return {
       customerId: Number(localSession.id),
-      email: localSession.identifier?.toLowerCase() || "",
+      email: String(localSession.identifier || "").toLowerCase(),
       name: localSession.name,
       provider: "local" as const,
     };
