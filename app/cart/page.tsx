@@ -27,6 +27,25 @@ type CheckoutFormData = {
   paymentMethod: "cod" | "gcash" | "maya" | "bank_transfer";
 };
 
+type SafeCartItem = {
+  id?: string | number;
+  artwork_id?: string | number;
+  artworkId?: string | number;
+  title?: string;
+  name?: string;
+  artist?: string;
+  artist_name?: string;
+  artistName?: string;
+  image?: string;
+  image_url?: string;
+  imageUrl?: string;
+  category?: string;
+  medium?: string;
+  dimensions?: string;
+  price?: number | string;
+  quantity?: number | string;
+};
+
 const SHIPPING_FEE = 50;
 const TAX_RATE = 0.12;
 
@@ -47,7 +66,7 @@ function formatPeso(amount: number) {
     style: "currency",
     currency: "PHP",
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(Number(amount || 0));
 }
 
 function splitName(fullName: string | null | undefined) {
@@ -58,6 +77,30 @@ function splitName(fullName: string | null | undefined) {
     firstName: parts[0] || "",
     lastName: parts.slice(1).join(" ") || "",
   };
+}
+
+function getItemId(item: SafeCartItem) {
+  return String(item.id || item.artwork_id || item.artworkId || "");
+}
+
+function getItemTitle(item: SafeCartItem) {
+  return String(item.title || item.name || "Untitled Artwork");
+}
+
+function getItemArtist(item: SafeCartItem) {
+  return String(item.artist || item.artist_name || item.artistName || "Gallery Artist");
+}
+
+function getItemImage(item: SafeCartItem) {
+  return String(item.image || item.image_url || item.imageUrl || "/placeholder.jpg");
+}
+
+function getItemPrice(item: SafeCartItem) {
+  return Number(item.price || 0);
+}
+
+function getItemQuantity(item: SafeCartItem) {
+  return Number(item.quantity || 1);
 }
 
 export default function CartPage() {
@@ -72,6 +115,8 @@ export default function CartPage() {
     getTotalItems,
   } = useCart();
 
+  const cartItems = items as SafeCartItem[];
+
   const [showBilling, setShowBilling] = useState(false);
   const [checkoutForm, setCheckoutForm] = useState<CheckoutFormData>(initialCheckoutForm);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -80,8 +125,8 @@ export default function CartPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  const subtotal = getTotalPrice();
-  const shipping = items.length > 0 ? SHIPPING_FEE : 0;
+  const subtotal = Number(getTotalPrice() || 0);
+  const shipping = cartItems.length > 0 ? SHIPPING_FEE : 0;
   const tax = Math.round(subtotal * TAX_RATE);
   const total = subtotal + shipping + tax;
 
@@ -114,10 +159,9 @@ export default function CartPage() {
         if (response.ok && result.user?.role === "customer") {
           if (!mounted) return;
 
-          setIsLoggedIn(true);
-
           const nameParts = splitName(result.user.name);
 
+          setIsLoggedIn(true);
           setCheckoutForm((currentForm) => ({
             ...currentForm,
             firstName: currentForm.firstName || nameParts.firstName,
@@ -129,23 +173,25 @@ export default function CartPage() {
         }
 
         const googleSession = await getSession();
+        const googleUser = googleSession?.user;
+        const googleEmail = googleUser?.email || "";
+        const googleName = googleUser?.name || "";
 
-        if (googleSession?.user?.email) {
+        if (googleEmail) {
           if (!mounted) return;
 
-          const nameParts = splitName(googleSession.user.name);
+          const nameParts = splitName(googleName);
 
           setIsLoggedIn(true);
-
           setCheckoutForm((currentForm) => ({
             ...currentForm,
             firstName: currentForm.firstName || nameParts.firstName,
             lastName: currentForm.lastName || nameParts.lastName,
-            email: currentForm.email || googleSession.user.email || "",
+            email: currentForm.email || googleEmail,
           }));
 
-          return;
-        }
+  return;
+}
 
         if (mounted) {
           setIsLoggedIn(false);
@@ -162,7 +208,6 @@ export default function CartPage() {
     }
 
     checkAuth();
-
     window.addEventListener("focus", checkAuth);
 
     return () => {
@@ -171,18 +216,19 @@ export default function CartPage() {
     };
   }, []);
 
-  const handleQuantityChange = (id: string, change: number) => {
-    const item = items.find((cartItem) => cartItem.id === id);
+  const handleQuantityChange = (item: SafeCartItem, change: number) => {
+    const id = getItemId(item);
+    const currentQuantity = getItemQuantity(item);
 
-    if (!item) return;
+    if (!id) return;
 
-    updateQuantity(id, item.quantity + change);
+    updateQuantity(id as never, currentQuantity + change);
   };
 
   const handleCheckoutSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (items.length === 0) return;
+    if (cartItems.length === 0) return;
 
     if (!isLoggedIn) {
       router.push("/login?next=/cart");
@@ -200,9 +246,9 @@ export default function CartPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          items: items.map((item) => ({
-            id: item.id,
-            quantity: item.quantity,
+          items: cartItems.map((item) => ({
+            id: getItemId(item),
+            quantity: getItemQuantity(item),
           })),
           customer: {
             firstName: checkoutForm.firstName,
@@ -260,17 +306,9 @@ export default function CartPage() {
 
       <main className="mx-auto max-w-7xl px-6 py-28">
         <motion.div
-          initial={{
-            opacity: 0,
-            y: 20,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.6,
-          }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
         >
           {successMessage && (
             <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
@@ -297,14 +335,14 @@ export default function CartPage() {
                     variant="outline"
                     size="sm"
                     onClick={clearCart}
-                    disabled={items.length === 0}
+                    disabled={cartItems.length === 0}
                   >
                     Clear Cart
                   </Button>
                 </CardHeader>
 
                 <CardContent>
-                  {items.length === 0 ? (
+                  {cartItems.length === 0 ? (
                     <div className="py-12 text-center">
                       <ShoppingCart className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                       <p className="text-muted-foreground">Your cart is empty</p>
@@ -315,69 +353,76 @@ export default function CartPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {items.map((item) => (
-                        <div key={item.id} className="flex gap-4 rounded-lg border p-4">
-                          <img
-                            src={item.image}
-                            alt={item.title}
-                            className="h-20 w-20 rounded object-cover"
-                          />
+                      {cartItems.map((item, index) => {
+                        const id = getItemId(item);
+                        const title = getItemTitle(item);
+                        const artist = getItemArtist(item);
+                        const image = getItemImage(item);
+                        const price = getItemPrice(item);
+                        const quantity = getItemQuantity(item);
 
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                              <div>
-                                <h3 className="font-medium text-foreground">{item.title}</h3>
-                                <p className="text-sm text-muted-foreground">{item.artist}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.category}
-                                  {item.medium ? ` • ${item.medium}` : ""}
-                                  {item.dimensions ? ` • ${item.dimensions}` : ""}
+                        return (
+                          <div key={`${id}-${index}`} className="flex gap-4 rounded-lg border p-4">
+                            <img
+                              src={image}
+                              alt={title}
+                              className="h-20 w-20 rounded object-cover"
+                            />
+
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                                <div>
+                                  <h3 className="font-medium text-foreground">{title}</h3>
+                                  <p className="text-sm text-muted-foreground">{artist}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {item.category ? String(item.category) : "Artwork"}
+                                    {item.medium ? ` • ${String(item.medium)}` : ""}
+                                    {item.dimensions ? ` • ${String(item.dimensions)}` : ""}
+                                  </p>
+                                </div>
+
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => removeItem(id as never)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="sr-only">Remove {title}</span>
+                                </Button>
+                              </div>
+
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => handleQuantityChange(item, -1)}
+                                    disabled={quantity <= 1}
+                                  >
+                                    <Minus className="h-4 w-4" />
+                                    <span className="sr-only">Decrease quantity</span>
+                                  </Button>
+
+                                  <span className="w-12 text-center font-medium">{quantity}</span>
+
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => handleQuantityChange(item, 1)}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    <span className="sr-only">Increase quantity</span>
+                                  </Button>
+                                </div>
+
+                                <p className="font-medium text-foreground">
+                                  {formatPeso(price * quantity)}
                                 </p>
                               </div>
-
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => removeItem(item.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">Remove {item.title}</span>
-                              </Button>
-                            </div>
-
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => handleQuantityChange(item.id, -1)}
-                                  disabled={item.quantity <= 1}
-                                >
-                                  <Minus className="h-4 w-4" />
-                                  <span className="sr-only">Decrease quantity</span>
-                                </Button>
-
-                                <span className="w-12 text-center font-medium">
-                                  {item.quantity}
-                                </span>
-
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => handleQuantityChange(item.id, 1)}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                  <span className="sr-only">Increase quantity</span>
-                                </Button>
-                              </div>
-
-                              <p className="font-medium text-foreground">
-                                {formatPeso(item.price * item.quantity)}
-                              </p>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
@@ -413,7 +458,7 @@ export default function CartPage() {
                     <span>{formatPeso(orderSummary.total)}</span>
                   </div>
 
-                  {!isCheckingAuth && !isLoggedIn && items.length > 0 && (
+                  {!isCheckingAuth && !isLoggedIn && cartItems.length > 0 && (
                     <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-200">
                       Please sign in or create a customer account before checkout.
                     </div>
@@ -431,7 +476,7 @@ export default function CartPage() {
 
                       setShowBilling((value) => !value);
                     }}
-                    disabled={items.length === 0 || isCheckingAuth}
+                    disabled={cartItems.length === 0 || isCheckingAuth}
                   >
                     {isCheckingAuth
                       ? "Checking account..."
@@ -444,17 +489,9 @@ export default function CartPage() {
 
               {showBilling && (
                 <motion.div
-                  initial={{
-                    opacity: 0,
-                    y: 20,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  transition={{
-                    duration: 0.3,
-                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
                 >
                   <Card>
                     <CardHeader>
