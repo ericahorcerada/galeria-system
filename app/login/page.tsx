@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Briefcase, Eye, EyeOff, Lock, Mail, Phone, ShieldCheck, User } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Footer } from "@/components/landing/footer";
 import { Header } from "@/components/landing/header";
 import { Button } from "@/components/ui/button";
@@ -86,11 +87,21 @@ export default function LoginPage() {
 
     const option = roleOptions.find((item) => item.role === role);
     if (option?.credentials) {
-      setFormData((current) => ({ ...current, email: option.credentials!.email, password: option.credentials!.password }));
+      setFormData((current) => ({
+        ...current,
+        email: option.credentials!.email,
+        password: option.credentials!.password,
+      }));
       return;
     }
 
     setFormData((current) => ({ ...current, email: "", password: "" }));
+  };
+
+  const handleGoogleLogin = () => {
+    setFormError("");
+    setFormSuccess("");
+    signIn("google", { callbackUrl: "/shop" });
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -129,9 +140,7 @@ export default function LoginPage() {
 
     try {
       const endpoint = isSignUp ? "/api/auth/register" : "/api/auth/login";
-      const payload = isSignUp
-        ? { ...formData, email: identifier }
-        : { identifier, password, role: selectedRole };
+      const payload = isSignUp ? { ...formData, email: identifier } : { identifier, password, role: selectedRole };
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -139,6 +148,7 @@ export default function LoginPage() {
         body: JSON.stringify(payload),
         cache: "no-store",
       });
+
       const result = await response.json();
 
       if (!response.ok || !result.success) {
@@ -149,13 +159,19 @@ export default function LoginPage() {
       if (!isSignUp && typeof window !== "undefined") {
         localStorage.setItem(
           "galeria_user",
-          JSON.stringify({ role: result.role || selectedRole, identifier, name: roleLabel(result.role || selectedRole) })
+          JSON.stringify({
+            role: result.role || selectedRole,
+            identifier,
+            name: roleLabel(result.role || selectedRole),
+          })
         );
       }
 
       setFormSuccess(isSignUp ? "Account created. Redirecting..." : `${roleLabel(result.role || selectedRole)} signed in. Redirecting...`);
+
       const next = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("next") : null;
       const redirectTo = isSafeRedirect(next) ? next! : result.redirectTo || "/shop";
+
       router.push(redirectTo);
       router.refresh();
     } catch {
@@ -178,11 +194,21 @@ export default function LoginPage() {
 
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-28">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_15%,rgba(217,184,120,0.18),transparent_30%),radial-gradient(circle_at_80%_10%,rgba(120,86,48,0.10),transparent_28%)]" />
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full max-w-lg rounded-2xl border border-border bg-card/95 p-6 text-card-foreground shadow-xl backdrop-blur">
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-lg rounded-2xl border border-border bg-card/95 p-6 text-card-foreground shadow-xl backdrop-blur"
+        >
           <div className="mb-8 text-center">
-            <h1 className="mb-4 font-serif text-2xl text-foreground sm:text-3xl md:text-4xl">{isSignUp ? "Create Account" : "Sign In"}</h1>
+            <h1 className="mb-4 font-serif text-2xl text-foreground sm:text-3xl md:text-4xl">
+              {isSignUp ? "Create Account" : "Sign In"}
+            </h1>
             <p className="text-muted-foreground">
-              {isSignUp ? "Create a customer account with a valid Gmail or email address." : "Choose your role, then sign in using your saved credentials."}
+              {isSignUp
+                ? "Create a customer account with a valid Gmail or email address."
+                : "Choose your role, then sign in using your saved credentials."}
             </p>
           </div>
 
@@ -191,6 +217,7 @@ export default function LoginPage() {
               {roleOptions.map((option) => {
                 const Icon = option.icon;
                 const isSelected = selectedRole === option.role;
+
                 return (
                   <button
                     key={option.role}
@@ -209,24 +236,79 @@ export default function LoginPage() {
             </div>
           )}
 
-          {formError && <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{formError}</div>}
-          {formSuccess && <div className="mb-4 rounded-lg border border-green-600/30 bg-green-600/10 px-4 py-3 text-sm text-green-700 dark:text-green-300">{formSuccess}</div>}
+          {formError && (
+            <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {formError}
+            </div>
+          )}
 
-          <motion.form initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.2 }} onSubmit={handleSubmit} className="space-y-6">
+          {formSuccess && (
+            <div className="mb-4 rounded-lg border border-green-600/30 bg-green-600/10 px-4 py-3 text-sm text-green-700 dark:text-green-300">
+              {formSuccess}
+            </div>
+          )}
+
+          {!isSignUp && selectedRole === "customer" && (
+            <div className="mb-6 space-y-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 w-full border-border bg-background text-sm font-medium text-foreground hover:bg-muted"
+                onClick={handleGoogleLogin}
+              >
+                Continue with Google Account
+              </Button>
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">or use email</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+            </div>
+          )}
+
+          <motion.form
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            onSubmit={handleSubmit}
+            className="space-y-6"
+          >
             {isSignUp && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-sm font-medium">First Name</Label>
+                  <Label htmlFor="firstName" className="text-sm font-medium">
+                    First Name
+                  </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="firstName" name="firstName" placeholder="Maria" value={formData.firstName} onChange={handleInputChange} className="h-12 border-border bg-background pl-10 text-foreground" required={isSignUp} />
+                    <Input
+                      id="firstName"
+                      name="firstName"
+                      placeholder="Maria"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      className="h-12 border-border bg-background pl-10 text-foreground"
+                      required={isSignUp}
+                    />
                   </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-sm font-medium">Last Name</Label>
+                  <Label htmlFor="lastName" className="text-sm font-medium">
+                    Last Name
+                  </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="lastName" name="lastName" placeholder="Reyes" value={formData.lastName} onChange={handleInputChange} className="h-12 border-border bg-background pl-10 text-foreground" required={isSignUp} />
+                    <Input
+                      id="lastName"
+                      name="lastName"
+                      placeholder="Reyes"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      className="h-12 border-border bg-background pl-10 text-foreground"
+                      required={isSignUp}
+                    />
                   </div>
                 </div>
               </div>
@@ -234,15 +316,30 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">
-                {isSignUp ? "Email Address" : selectedRole === "admin" ? "Admin Username" : selectedRole === "staff" ? "Staff Username" : "Customer Gmail or Email"}
+                {isSignUp
+                  ? "Email Address"
+                  : selectedRole === "admin"
+                    ? "Admin Username"
+                    : selectedRole === "staff"
+                      ? "Staff Username"
+                      : "Customer Gmail or Email"}
               </Label>
+
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="email"
                   name="email"
                   type={isSignUp ? "email" : "text"}
-                  placeholder={isSignUp ? "maria@gmail.com" : selectedRole === "admin" ? "admin" : selectedRole === "staff" ? "username from Admin > Staff" : "maria@gmail.com"}
+                  placeholder={
+                    isSignUp
+                      ? "maria@gmail.com"
+                      : selectedRole === "admin"
+                        ? "admin"
+                        : selectedRole === "staff"
+                          ? "username from Admin > Staff"
+                          : "maria@gmail.com"
+                  }
                   value={formData.email}
                   onChange={handleInputChange}
                   className="h-12 border-border bg-background pl-10 text-foreground"
@@ -253,29 +350,54 @@ export default function LoginPage() {
 
             {isSignUp && (
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium">Phone Number <span className="text-muted-foreground">(optional)</span></Label>
+                <Label htmlFor="phone" className="text-sm font-medium">
+                  Phone Number <span className="text-muted-foreground">(optional)</span>
+                </Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="phone" name="phone" type="tel" placeholder="+63 917 000 0000" value={formData.phone} onChange={handleInputChange} className="h-12 border-border bg-background pl-10 text-foreground" />
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="+63 917 000 0000"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="h-12 border-border bg-background pl-10 text-foreground"
+                  />
                 </div>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium">
+                Password
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder={isSignUp ? "At least 8 characters" : selectedRole === "admin" ? "artspace2024" : selectedRole === "staff" ? "staff password" : "your account password"}
+                  placeholder={
+                    isSignUp
+                      ? "At least 8 characters"
+                      : selectedRole === "admin"
+                        ? "artspace2024"
+                        : selectedRole === "staff"
+                          ? "staff password"
+                          : "your account password"
+                  }
                   value={formData.password}
                   onChange={handleInputChange}
                   className="h-12 border-border bg-background pl-10 pr-10 text-foreground"
                   required
                 />
-                <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label={showPassword ? "Hide password" : "Show password"}>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
@@ -283,19 +405,42 @@ export default function LoginPage() {
 
             {isSignUp && (
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium">Enter Password Again</Label>
+                <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                  Enter Password Again
+                </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="confirmPassword" name="confirmPassword" type={showPassword ? "text" : "password"} placeholder="Enter the same password again" value={formData.confirmPassword} onChange={handleInputChange} className="h-12 border-border bg-background pl-10 pr-10 text-foreground" required={isSignUp} />
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter the same password again"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="h-12 border-border bg-background pl-10 pr-10 text-foreground"
+                    required={isSignUp}
+                  />
                 </div>
               </div>
             )}
 
             {!isSignUp && (
               <div className="rounded-lg bg-muted px-3 py-3 text-xs leading-relaxed text-muted-foreground">
-                Selected role: <span className="font-semibold text-foreground">{selectedOption.title}</span>. {selectedOption.description}
-                {selectedRole === "staff" && <span className="block">Staff login uses the <span className="font-semibold text-foreground">username</span> and password saved in <span className="font-semibold text-foreground">Admin &gt; Staff</span>. Seeded accounts use password <span className="font-semibold text-foreground">artspace2024</span>.</span>}
-                {selectedRole === "admin" && <span className="block">Admin credentials: <span className="font-semibold text-foreground">admin</span> / <span className="font-semibold text-foreground">artspace2024</span></span>}
+                Selected role: <span className="font-semibold text-foreground">{selectedOption.title}</span>.{" "}
+                {selectedOption.description}
+                {selectedRole === "staff" && (
+                  <span className="block">
+                    Staff login uses the <span className="font-semibold text-foreground">username</span> and password saved in{" "}
+                    <span className="font-semibold text-foreground">Admin &gt; Staff</span>. Seeded accounts use password{" "}
+                    <span className="font-semibold text-foreground">artspace2024</span>.
+                  </span>
+                )}
+                {selectedRole === "admin" && (
+                  <span className="block">
+                    Admin credentials: <span className="font-semibold text-foreground">admin</span> /{" "}
+                    <span className="font-semibold text-foreground">artspace2024</span>
+                  </span>
+                )}
               </div>
             )}
 
@@ -325,7 +470,12 @@ export default function LoginPage() {
           </motion.div>
 
           {isSignUp && (
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.5 }} className="mt-4 text-center text-xs text-muted-foreground">
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="mt-4 text-center text-xs text-muted-foreground"
+            >
               Accounts are stored in the <code className="rounded bg-muted px-1 py-0.5">customers</code> table using a scrypt password hash.
             </motion.p>
           )}
