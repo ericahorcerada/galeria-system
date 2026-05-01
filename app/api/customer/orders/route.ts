@@ -1,4 +1,4 @@
-import type { RowDataPacket } from "mysql2";
+﻿import type { RowDataPacket } from "mysql2";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getPool } from "@/lib/db";
