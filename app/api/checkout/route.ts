@@ -10,6 +10,38 @@ export const dynamic = "force-dynamic";
 
 const SHIPPING_FEE = 50;
 const TAX_RATE = 0.12;
+const PAYMENT_METHODS = new Set(["cod", "gcash", "maya", "bank_transfer"]);
+
+function getPaymentLabel(method: string) {
+  const labels: Record<string, string> = {
+    cod: "COD / Pay on Pickup",
+    gcash: "GCash",
+    maya: "Maya",
+    bank_transfer: "Bank Transfer",
+  };
+
+  return labels[method] || "COD / Pay on Pickup";
+}
+
+function getPaymentMessage(method: string) {
+  if (method === "cod") {
+    return "Order placed successfully. Please prepare payment upon delivery or pickup.";
+  }
+
+  if (method === "gcash") {
+    return "Order placed successfully. Please send your GCash payment and wait for staff verification.";
+  }
+
+  if (method === "maya") {
+    return "Order placed successfully. Please send your Maya payment and wait for staff verification.";
+  }
+
+  if (method === "bank_transfer") {
+    return "Order placed successfully. Please complete your bank transfer and wait for staff verification.";
+  }
+
+  return "Order placed successfully.";
+}
 
 type CheckoutItem = {
   id: string | number;
@@ -135,15 +167,15 @@ export async function POST(request: Request) {
     const country = asText(body.shipping?.country) || "Philippines";
     const paymentMethod = asText(body.paymentMethod) || "cod";
 
-    if (rawItems.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Your cart is empty.",
-        },
-        { status: 400 }
-      );
-    }
+if (!PAYMENT_METHODS.has(paymentMethod)) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "Invalid payment method.",
+    },
+    { status: 400 }
+  );
+}
 
     if (!firstName || !lastName || !email || !phone || !address || !city || !postalCode) {
       return NextResponse.json(
@@ -317,20 +349,21 @@ export async function POST(request: Request) {
     await connection.commit();
 
     return NextResponse.json({
-      success: true,
-      order: {
-        id: orderId,
-        orderNumber,
-        subtotal,
-        shippingFee,
-        taxAmount,
-        totalAmount,
-        paymentMethod,
-        paymentStatus: "pending",
-        orderStatus: "pending",
-      },
-      message: "Order placed successfully.",
-    });
+  success: true,
+  order: {
+    id: orderId,
+    orderNumber,
+    subtotal,
+    shippingFee,
+    taxAmount,
+    totalAmount,
+    paymentMethod,
+    paymentMethodLabel: getPaymentLabel(paymentMethod),
+    paymentStatus: "pending",
+    orderStatus: "pending",
+  },
+  message: getPaymentMessage(paymentMethod),
+});
   } catch (error) {
     await connection.rollback();
 

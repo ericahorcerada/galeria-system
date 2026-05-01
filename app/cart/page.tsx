@@ -594,27 +594,57 @@ export default function CartPage() {
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="paymentMethod">Preferred Payment Method</Label>
+                        <div className="space-y-3">
+  <Label htmlFor="paymentMethod">Preferred Payment Method</Label>
 
-                          <select
-                            id="paymentMethod"
-                            name="paymentMethod"
-                            value={checkoutForm.paymentMethod}
-                            onChange={handleInputChange}
-                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          >
-                            <option value="cod">Cash on delivery / pay on pickup</option>
-                            <option value="gcash">GCash</option>
-                            <option value="maya">Maya</option>
-                            <option value="bank_transfer">Bank transfer</option>
-                          </select>
+  <select
+    id="paymentMethod"
+    name="paymentMethod"
+    value={checkoutForm.paymentMethod}
+    onChange={handleInputChange}
+    className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+  >
+    <option value="cod">COD / Pay on Pickup</option>
+    <option value="gcash">GCash</option>
+    <option value="maya">Maya</option>
+    <option value="bank_transfer">Bank Transfer</option>
+  </select>
 
-                          <p className="text-xs text-muted-foreground">
-                            Your order is saved in MySQL and inventory is reserved immediately.
-                            Online payment instructions can be confirmed by staff.
-                          </p>
-                        </div>
+  {checkoutForm.paymentMethod === "cod" && (
+    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+      <p className="font-semibold">COD / Pay on Pickup</p>
+      <p>Pay when your artwork is delivered or picked up. Staff will confirm your order first.</p>
+    </div>
+  )}
+
+  {checkoutForm.paymentMethod === "gcash" && (
+    <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 text-xs text-blue-800 dark:text-blue-200">
+      <p className="font-semibold">GCash Payment</p>
+      <p>After placing your order, send payment to the gallery GCash number. Staff will verify before processing.</p>
+      <p className="mt-2 font-semibold">GCash Name: GALERIA</p>
+      <p className="font-semibold">GCash Number: 09XX XXX XXXX</p>
+    </div>
+  )}
+
+  {checkoutForm.paymentMethod === "maya" && (
+    <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-xs text-green-800 dark:text-green-200">
+      <p className="font-semibold">Maya Payment</p>
+      <p>After placing your order, send payment to the gallery Maya account. Staff will verify before processing.</p>
+      <p className="mt-2 font-semibold">Maya Name: GALERIA</p>
+      <p className="font-semibold">Maya Number: 09XX XXX XXXX</p>
+    </div>
+  )}
+
+  {checkoutForm.paymentMethod === "bank_transfer" && (
+    <div className="rounded-lg border border-purple-500/30 bg-purple-500/10 p-3 text-xs text-purple-800 dark:text-purple-200">
+      <p className="font-semibold">Bank Transfer</p>
+      <p>After placing your order, transfer the total amount to the gallery bank account. Staff will verify before processing.</p>
+      <p className="mt-2 font-semibold">Bank: BDO / BPI / LandBank</p>
+      <p className="font-semibold">Account Name: GALERIA</p>
+      <p className="font-semibold">Account Number: 0000-0000-0000</p>
+    </div>
+  )}
+</div>
 
                         <Button type="submit" className="w-full" disabled={isProcessing}>
                           {isProcessing ? (
