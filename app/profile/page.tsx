@@ -18,6 +18,10 @@ import {
   Settings,
   Package,
   Home,
+  Clock,
+  CheckCircle,
+  ShieldCheck,
+  Ticket,
 } from "lucide-react";
 import { Header } from "@/components/landing/header";
 import { Footer } from "@/components/landing/footer";
@@ -29,9 +33,12 @@ type ProfileUser = {
   provider: "google" | "local";
 };
 
+type ActivePanel = "pay" | "process" | "receive" | "rate" | "history" | "notifications" | "account";
+
 export default function ProfilePage() {
   const [user, setUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activePanel, setActivePanel] = useState<ActivePanel>("pay");
 
   useEffect(() => {
     async function loadUser() {
@@ -85,7 +92,7 @@ export default function ProfilePage() {
         cache: "no-store",
       });
     } catch {
-      // continue logout
+      // Continue logout even if old logout route fails.
     }
 
     localStorage.removeItem("galeria_user");
@@ -110,6 +117,68 @@ export default function ProfilePage() {
 
   const firstName = user.name.split(" ")[0] || "Customer";
 
+  const panelContent = {
+    pay: {
+      title: "To Pay",
+      icon: CreditCard,
+      description: "Items added to your cart and unpaid orders will appear here.",
+      actionText: "Go to Cart",
+      actionHref: "/cart",
+      note: "Review your selected artworks and proceed to checkout when ready.",
+    },
+    process: {
+      title: "To Process",
+      icon: Package,
+      description: "Orders being prepared by the gallery will appear here.",
+      actionText: "Continue Shopping",
+      actionHref: "/shop",
+      note: "After checkout, your order details can be monitored from this account page.",
+    },
+    receive: {
+      title: "To Receive",
+      icon: Truck,
+      description: "Delivery and pickup updates will appear here.",
+      actionText: "View Artworks",
+      actionHref: "/shop",
+      note: "The gallery will update customers once artworks are packed and ready.",
+    },
+    rate: {
+      title: "To Rate",
+      icon: Star,
+      description: "Completed purchases can be rated through the feedback page.",
+      actionText: "Leave Feedback",
+      actionHref: "/feedback",
+      note: "Share your experience to help improve the gallery service.",
+    },
+    history: {
+      title: "Purchase History",
+      icon: Clock,
+      description: "Your completed and active orders will be shown here once checkout is finished.",
+      actionText: "Shop More Artworks",
+      actionHref: "/shop",
+      note: "This section works as your customer order summary area.",
+    },
+    notifications: {
+      title: "Notifications",
+      icon: Bell,
+      description: "Gallery updates, order notices, and account reminders will appear here.",
+      actionText: "Browse Sale Offers",
+      actionHref: "/sale",
+      note: "Check sale offers regularly for discounted artworks.",
+    },
+    account: {
+      title: "Account Details",
+      icon: Settings,
+      description: "This account is connected using your saved login method.",
+      actionText: "Back to Shop",
+      actionHref: "/shop",
+      note: `Login type: ${user.provider === "google" ? "Google Account" : "Galeria Email Account"}`,
+    },
+  };
+
+  const currentPanel = panelContent[activePanel];
+  const CurrentIcon = currentPanel.icon;
+
   return (
     <div className="min-h-screen bg-[#f8f3ea] text-[#2b1b10]">
       <Header />
@@ -123,12 +192,8 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <p className="text-sm uppercase tracking-[0.25em] text-white/75">
-                  Customer Profile
-                </p>
-                <h1 className="mt-1 font-serif text-3xl font-semibold sm:text-4xl">
-                  {user.name}
-                </h1>
+                <p className="text-sm uppercase tracking-[0.25em] text-white/75">Customer Profile</p>
+                <h1 className="mt-1 font-serif text-3xl font-semibold sm:text-4xl">{user.name}</h1>
                 <p className="mt-1 text-sm text-white/80">{user.email}</p>
                 <p className="mt-2 inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
                   {user.provider === "google" ? "Google Account" : "Galeria Account"}
@@ -138,9 +203,7 @@ export default function ProfilePage() {
 
             <div className="flex flex-wrap gap-3">
               <Link href="/shop">
-                <Button className="bg-white text-[#6b3f1f] hover:bg-white/90">
-                  Shop Now
-                </Button>
+                <Button className="bg-white text-[#6b3f1f] hover:bg-white/90">Shop Now</Button>
               </Link>
 
               <Button
@@ -173,30 +236,70 @@ export default function ProfilePage() {
         <section className="mt-6 rounded-3xl border border-[#eadcc5] bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-xl font-semibold">My Purchases</h2>
-            <Link href="/orders" className="text-sm font-medium text-[#9a6430] hover:underline">
+            <button
+              type="button"
+              onClick={() => setActivePanel("history")}
+              className="text-sm font-medium text-[#9a6430] hover:underline"
+            >
               View Purchase History
-            </Link>
+            </button>
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Link href="/cart" className="rounded-2xl border border-[#eadcc5] p-5 text-center transition hover:bg-[#f8f3ea]">
+            <button
+              type="button"
+              onClick={() => setActivePanel("pay")}
+              className="rounded-2xl border border-[#eadcc5] p-5 text-center transition hover:bg-[#f8f3ea]"
+            >
               <CreditCard className="mx-auto mb-3 h-8 w-8 text-[#9a6430]" />
               <p className="font-medium">To Pay</p>
-            </Link>
+            </button>
 
-            <Link href="/orders" className="rounded-2xl border border-[#eadcc5] p-5 text-center transition hover:bg-[#f8f3ea]">
+            <button
+              type="button"
+              onClick={() => setActivePanel("process")}
+              className="rounded-2xl border border-[#eadcc5] p-5 text-center transition hover:bg-[#f8f3ea]"
+            >
               <Package className="mx-auto mb-3 h-8 w-8 text-[#9a6430]" />
               <p className="font-medium">To Process</p>
-            </Link>
+            </button>
 
-            <Link href="/orders" className="rounded-2xl border border-[#eadcc5] p-5 text-center transition hover:bg-[#f8f3ea]">
+            <button
+              type="button"
+              onClick={() => setActivePanel("receive")}
+              className="rounded-2xl border border-[#eadcc5] p-5 text-center transition hover:bg-[#f8f3ea]"
+            >
               <Truck className="mx-auto mb-3 h-8 w-8 text-[#9a6430]" />
               <p className="font-medium">To Receive</p>
-            </Link>
+            </button>
 
-            <Link href="/feedback" className="rounded-2xl border border-[#eadcc5] p-5 text-center transition hover:bg-[#f8f3ea]">
+            <button
+              type="button"
+              onClick={() => setActivePanel("rate")}
+              className="rounded-2xl border border-[#eadcc5] p-5 text-center transition hover:bg-[#f8f3ea]"
+            >
               <Star className="mx-auto mb-3 h-8 w-8 text-[#9a6430]" />
               <p className="font-medium">To Rate</p>
+            </button>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-3xl border border-[#eadcc5] bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f8f3ea] text-[#9a6430]">
+                <CurrentIcon className="h-7 w-7" />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-semibold">{currentPanel.title}</h2>
+                <p className="text-sm text-muted-foreground">{currentPanel.description}</p>
+                <p className="mt-1 text-xs text-[#9a6430]">{currentPanel.note}</p>
+              </div>
+            </div>
+
+            <Link href={currentPanel.actionHref}>
+              <Button>{currentPanel.actionText}</Button>
             </Link>
           </div>
         </section>
@@ -232,25 +335,33 @@ export default function ProfilePage() {
             <h2 className="mb-5 text-xl font-semibold">Account</h2>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-2xl bg-[#f8f3ea] px-4 py-4">
+              <button
+                type="button"
+                onClick={() => setActivePanel("account")}
+                className="flex w-full items-center justify-between rounded-2xl bg-[#f8f3ea] px-4 py-4 text-left"
+              >
                 <div className="flex items-center gap-3">
                   <User className="h-5 w-5 text-[#9a6430]" />
                   <span className="font-medium">Profile Name</span>
                 </div>
                 <span className="text-sm text-muted-foreground">{user.name}</span>
-              </div>
+              </button>
 
-              <div className="flex items-center justify-between rounded-2xl bg-[#f8f3ea] px-4 py-4">
+              <button
+                type="button"
+                onClick={() => setActivePanel("notifications")}
+                className="flex w-full items-center justify-between rounded-2xl bg-[#f8f3ea] px-4 py-4 text-left"
+              >
                 <div className="flex items-center gap-3">
                   <Bell className="h-5 w-5 text-[#9a6430]" />
                   <span className="font-medium">Notifications</span>
                 </div>
                 <span className="text-sm text-muted-foreground">Order updates</span>
-              </div>
+              </button>
 
               <div className="flex items-center justify-between rounded-2xl bg-[#f8f3ea] px-4 py-4">
                 <div className="flex items-center gap-3">
-                  <Settings className="h-5 w-5 text-[#9a6430]" />
+                  <ShieldCheck className="h-5 w-5 text-[#9a6430]" />
                   <span className="font-medium">Login Type</span>
                 </div>
                 <span className="text-sm text-muted-foreground">
