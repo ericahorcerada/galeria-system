@@ -275,13 +275,12 @@ export function Hero() {
               {homepage.smallLabel}
             </div>
 
-            <h1 className="font-serif text-[46px] font-light leading-[0.98] tracking-[-0.03em] text-white sm:text-[58px] md:text-[72px] lg:text-[82px]">
-              {homepage.mainTitle}
+            <h1 className="font-serif text-[34px] font-light leading-[1.05] tracking-[-0.02em] text-white sm:text-[42px] md:text-[52px] lg:text-[62px]">              {homepage.mainTitle}
               <br />
               <span className="text-[#d8b26a]">{highlightedWords}</span>
             </h1>
 
-            <p className="mt-7 max-w-2xl text-base leading-8 text-white/85 md:text-lg">
+            <p className="mt-6 max-w-xl text-sm leading-7 text-white/85 md:text-base">
               {homepage.description}
             </p>
 
