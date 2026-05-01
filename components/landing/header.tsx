@@ -135,11 +135,11 @@ export function Header() {
     : "text-white/90 hover:text-white";
 
   const profileHref =
-    user?.role === "admin"
-      ? "/admin"
-      : user?.role === "staff"
-        ? "/staff"
-        : "/customer/dashboard";
+  user?.role === "admin"
+    ? "/admin"
+    : user?.role === "staff"
+      ? "/staff"
+      : "/profile";
 
   return (
     <>
