@@ -35,13 +35,13 @@ const DEFAULT_HOMEPAGE: Required<HomepageData> = {
   primaryButtonLink: "/shop",
   secondaryButtonText: "Create Customer Account",
   secondaryButtonLink: "/login",
-  backgroundImageUrl: "https://i.ibb.co/zR8CwwNZ/Enhancer-AI-UHD-da.jpg",
-  backgroundImage: "https://i.ibb.co/zR8CwwNZ/Enhancer-AI-UHD-da.jpg",
+  backgroundImageUrl: "",
+  backgroundImage: "",
   featuredTitle: "Golden Horizon",
   featuredSubtitle:
     "A peaceful landscape artwork with warm skies, calm waters, and timeless natural beauty.",
-  featuredImageUrl: "https://i.ibb.co/mChT8Tyr/Enhancer-AI-UHD-wall.jpg",
-  featuredImage: "https://i.ibb.co/mChT8Tyr/Enhancer-AI-UHD-wall.jpg",
+  featuredImageUrl: "",
+  featuredImage: "",
 };
 
 function getValue(source: Record<string, unknown>, keys: string[], fallback: string) {
@@ -86,7 +86,7 @@ function normalizeHomepageData(rawData: unknown): Required<HomepageData> {
       "imageUrl",
       "image_url",
     ],
-    DEFAULT_HOMEPAGE.backgroundImageUrl
+    ""
   );
 
   const featuredImageUrl = getValue(
@@ -99,7 +99,7 @@ function normalizeHomepageData(rawData: unknown): Required<HomepageData> {
       "cardImageUrl",
       "card_image_url",
     ],
-    DEFAULT_HOMEPAGE.featuredImageUrl
+    ""
   );
 
   return {
@@ -177,10 +177,23 @@ function normalizeHomepageData(rawData: unknown): Required<HomepageData> {
   };
 }
 
+function isUsableImageUrl(url: string) {
+  if (!url) return false;
+
+  const lower = url.toLowerCase();
+
+  if (lower.includes("imgbb.com")) return false;
+  if (lower.includes("image not found")) return false;
+  if (lower.includes("undefined")) return false;
+  if (lower.includes("null")) return false;
+
+  return true;
+}
+
 export function Hero() {
   const [homepage, setHomepage] = useState<Required<HomepageData>>(DEFAULT_HOMEPAGE);
-  const [backgroundLoaded, setBackgroundLoaded] = useState(false);
-  const [featuredLoaded, setFeaturedLoaded] = useState(false);
+  const [backgroundFailed, setBackgroundFailed] = useState(false);
+  const [featuredFailed, setFeaturedFailed] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -201,6 +214,8 @@ export function Hero() {
 
         if (mounted) {
           setHomepage(normalized);
+          setBackgroundFailed(false);
+          setFeaturedFailed(false);
         }
       } catch {
         if (mounted) {
@@ -224,25 +239,28 @@ export function Hero() {
     );
   }, [homepage.highlightedTitle, homepage.highlightedTitleLine]);
 
+  const showBackgroundImage =
+    isUsableImageUrl(homepage.backgroundImageUrl) && !backgroundFailed;
+
+  const showFeaturedImage =
+    isUsableImageUrl(homepage.featuredImageUrl) && !featuredFailed;
+
   return (
-    <section className="relative min-h-screen overflow-hidden bg-[#120800] text-white">
-      <div className="absolute inset-0">
+    <section className="relative min-h-screen overflow-hidden bg-[#160900] text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(219,170,82,0.42),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(120,64,16,0.35),transparent_30%),linear-gradient(135deg,#0f0600_0%,#2b1404_42%,#704612_100%)]" />
+
+      {showBackgroundImage && (
         <img
           src={homepage.backgroundImageUrl}
           alt="Galeria background artwork"
-          className={`h-full w-full object-cover transition-opacity duration-700 ${
-            backgroundLoaded ? "opacity-100" : "opacity-100"
-          }`}
-          onLoad={() => setBackgroundLoaded(true)}
-          onError={(event) => {
-            event.currentTarget.src = DEFAULT_HOMEPAGE.backgroundImageUrl;
-          }}
+          className="absolute inset-0 h-full w-full object-cover opacity-70"
+          onError={() => setBackgroundFailed(true)}
         />
+      )}
 
-        <div className="absolute inset-0 bg-black/45" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/10" />
-      </div>
+      <div className="absolute inset-0 bg-black/45" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-black/20" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-center px-6 pb-16 pt-28 lg:px-8">
         <div className="grid w-full items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
@@ -299,18 +317,26 @@ export function Hero() {
             className="hidden justify-center lg:flex"
           >
             <div className="w-full max-w-[420px] rounded-[2rem] border border-white/20 bg-white/10 p-5 shadow-2xl backdrop-blur-md">
-              <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-black/20">
-                <img
-                  src={homepage.featuredImageUrl}
-                  alt={homepage.featuredTitle}
-                  className={`h-full w-full object-cover transition-opacity duration-700 ${
-                    featuredLoaded ? "opacity-100" : "opacity-100"
-                  }`}
-                  onLoad={() => setFeaturedLoaded(true)}
-                  onError={(event) => {
-                    event.currentTarget.src = DEFAULT_HOMEPAGE.featuredImageUrl;
-                  }}
-                />
+              <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#8b551c] via-[#d0993b] to-[#241107]">
+                {showFeaturedImage ? (
+                  <img
+                    src={homepage.featuredImageUrl}
+                    alt={homepage.featuredTitle}
+                    className="h-full w-full object-cover"
+                    onError={() => setFeaturedFailed(true)}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center p-8 text-center">
+                    <div>
+                      <p className="font-serif text-3xl text-white">
+                        {homepage.featuredTitle}
+                      </p>
+                      <p className="mt-3 text-sm text-white/75">
+                        Featured artwork preview
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-5 flex items-end justify-between gap-4">
