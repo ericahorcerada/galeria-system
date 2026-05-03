@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -96,9 +96,9 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-inter), 'Inter', system-ui, sans-serif;
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
-  --font-serif: var(--font-cormorant), 'Cormorant Garamond', 'Georgia', serif;
+  --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", monospace;
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -134,11 +134,6 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -147,133 +142,158 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-
-  html,
-  body {
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  body {
-    @apply text-foreground;
-    background:
-      radial-gradient(circle at top left, rgba(251, 146, 60, 0.16), transparent 32%),
-      radial-gradient(circle at top right, rgba(236, 72, 153, 0.12), transparent 30%),
-      radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.10), transparent 28%),
-      linear-gradient(135deg, #fffaf0 0%, #fff1f2 45%, #f5f3ff 100%);
-  }
-
-  .dark body {
-    background:
-      radial-gradient(circle at top left, rgba(251, 146, 60, 0.12), transparent 30%),
-      radial-gradient(circle at top right, rgba(236, 72, 153, 0.10), transparent 28%),
-      radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.08), transparent 30%),
-      linear-gradient(135deg, #16091f 0%, #1d0b26 50%, #100616 100%);
-  }
-
-  input,
-  textarea,
-  select {
-    color: var(--foreground);
-    background-color: var(--background);
-  }
-
-  input::placeholder,
-  textarea::placeholder {
-    color: var(--muted-foreground);
-  }
-
-  option {
-    color: var(--foreground);
-    background-color: var(--background);
-  }
-
-  a {
-    color: inherit;
-  }
-
-  img,
-  video,
-  canvas,
-  svg {
-    max-width: 100%;
-  }
-
-  input[type="file"]::file-selector-button {
-    color: var(--foreground);
-    background: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    padding: 0.35rem 0.65rem;
-    margin-right: 0.75rem;
-  }
-
-  .text-on-dark {
-    color: white;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.32);
-  }
-
-  html,
-  body {
-    transition: background-color 0.3s ease, color 0.3s ease;
-  }
-
-  * {
-    transition:
-      border-color 0.3s ease,
-      background-color 0.3s ease,
-      color 0.3s ease;
-  }
+* {
+  border-color: var(--border);
+  outline-color: var(--ring);
 }
 
-@layer components {
-  .art-gradient-text {
-    background: linear-gradient(90deg, #f97316, #ec4899, #8b5cf6, #2563eb);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  .art-card {
-    @apply rounded-2xl border border-white/60 bg-white/80 shadow-xl shadow-orange-200/30 backdrop-blur;
-  }
-
-  .art-button {
-    @apply rounded-xl bg-gradient-to-r from-orange-500 via-pink-500 to-violet-600 text-white shadow-lg shadow-pink-300/40 hover:opacity-95;
-  }
-
-  .art-soft-panel {
-    background:
-      radial-gradient(circle at top left, rgba(251, 146, 60, 0.16), transparent 35%),
-      radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.14), transparent 35%),
-      rgba(255, 255, 255, 0.78);
-  }
+html {
+  background-color: var(--background);
 }
 
-@layer utilities {
-  .mobile-safe-table {
-    min-width: 760px;
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  color: var(--foreground);
+  background:
+    radial-gradient(circle at top left, rgba(251, 146, 60, 0.16), transparent 32%),
+    radial-gradient(circle at top right, rgba(236, 72, 153, 0.12), transparent 30%),
+    radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.10), transparent 28%),
+    linear-gradient(135deg, #fffaf0 0%, #fff1f2 45%, #f5f3ff 100%);
+}
+
+.dark body {
+  background:
+    radial-gradient(circle at top left, rgba(251, 146, 60, 0.12), transparent 30%),
+    radial-gradient(circle at top right, rgba(236, 72, 153, 0.10), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.08), transparent 30%),
+    linear-gradient(135deg, #16091f 0%, #1d0b26 50%, #100616 100%);
+}
+
+input,
+textarea,
+select {
+  color: var(--foreground);
+  background-color: var(--background);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted-foreground);
+}
+
+option {
+  color: var(--foreground);
+  background-color: var(--background);
+}
+
+a {
+  color: inherit;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+input[type="file"]::file-selector-button {
+  color: var(--foreground);
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  margin-right: 0.75rem;
+}
+
+.text-on-dark {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.32);
+}
+
+.art-gradient-text {
+  background: linear-gradient(90deg, #f97316, #ec4899, #8b5cf6, #2563eb);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.art-card {
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.60);
+  background: rgba(255, 255, 255, 0.80);
+  box-shadow: 0 24px 48px rgba(251, 146, 60, 0.14);
+  backdrop-filter: blur(12px);
+}
+
+.dark .art-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(32, 18, 45, 0.78);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.20);
+}
+
+.art-button {
+  border-radius: 0.75rem;
+  color: white;
+  background: linear-gradient(90deg, #f97316, #ec4899, #7c3aed);
+  box-shadow: 0 14px 28px rgba(236, 72, 153, 0.25);
+}
+
+.art-button:hover {
+  opacity: 0.95;
+}
+
+.art-soft-panel {
+  background:
+    radial-gradient(circle at top left, rgba(251, 146, 60, 0.16), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.14), transparent 35%),
+    rgba(255, 255, 255, 0.78);
+}
+
+.dark .art-soft-panel {
+  background:
+    radial-gradient(circle at top left, rgba(251, 146, 60, 0.12), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.12), transparent 35%),
+    rgba(32, 18, 45, 0.78);
+}
+
+.mobile-safe-table {
+  min-width: 760px;
+}
+
+.mobile-dialog {
+  max-height: calc(100dvh - 1rem);
+  overflow-y: auto;
+}
+
+html,
+body,
+* {
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+@media (max-width: 640px) {
+  .mobile-stack-actions > * {
+    width: 100%;
   }
 
-  .mobile-dialog {
-    max-height: calc(100dvh - 1rem);
-    overflow-y: auto;
-  }
-
-  @media (max-width: 640px) {
-    .mobile-stack-actions > * {
-      width: 100%;
-    }
-
-    .mobile-full-button {
-      width: 100%;
-      justify-content: center;
-    }
+  .mobile-full-button {
+    width: 100%;
+    justify-content: center;
   }
 }
