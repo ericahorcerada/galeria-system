@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
 import mysql from "mysql2/promise";
 
+export const dynamic = "force-dynamic";
+
 const dbConfig = {
   host: process.env.MYSQL_HOST,
   port: Number(process.env.MYSQL_PORT || 3306),
   user: process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
   database: process.env.MYSQL_DATABASE,
+};
+
+const defaultSettings = {
+  hero_title: "FEATURED ARTISTS",
+  main_title: "ARTISTS",
+  hero_subtitle:
+    "Meet the visionaries behind our curated collection of contemporary Filipino art",
+  heritage_title: "CONTEMPORARY FILIPINO ART",
+  hero_background_url: "",
+  section_title: "Featured Artists",
+  section_subtitle:
+    "Our gallery represents a diverse group of established and emerging artists.",
 };
 
 async function getConnection() {
@@ -61,19 +75,11 @@ async function ensureArtistsPageTable() {
       'CONTEMPORARY FILIPINO ART',
       '',
       'Featured Artists',
-      'Our gallery represents a diverse group of established and emerging artists. Edits saved in the admin Artists page are shown here automatically.'
+      'Our gallery represents a diverse group of established and emerging artists.'
     )
   `);
 
   await connection.end();
-}
-
-function cleanText(value: unknown, fallback = "") {
-  if (typeof value !== "string") {
-    return fallback;
-  }
-
-  return value.trim();
 }
 
 export async function GET() {
@@ -88,89 +94,24 @@ export async function GET() {
 
     await connection.end();
 
-    const settings = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+    const settings =
+      Array.isArray(rows) && rows.length > 0
+        ? {
+            ...defaultSettings,
+            ...(rows[0] as typeof defaultSettings),
+          }
+        : defaultSettings;
 
     return NextResponse.json({
       success: true,
       settings,
     });
   } catch (error) {
-    console.error("GET /api/admin/artists-page error:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Unable to load Artists page settings.",
-      },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PATCH(request: Request) {
-  try {
-    await ensureArtistsPageTable();
-
-    const body = await request.json();
-
-    const heroTitle = cleanText(body.hero_title, "FEATURED ARTISTS");
-    const mainTitle = cleanText(body.main_title, "ARTISTS");
-    const heroSubtitle = cleanText(
-      body.hero_subtitle,
-      "Meet the visionaries behind our curated collection of contemporary Filipino art"
-    );
-    const heritageTitle = cleanText(
-      body.heritage_title,
-      "CONTEMPORARY FILIPINO ART"
-    );
-    const heroBackgroundUrl = cleanText(body.hero_background_url, "");
-    const sectionTitle = cleanText(body.section_title, "Featured Artists");
-    const sectionSubtitle = cleanText(
-      body.section_subtitle,
-      "Our gallery represents a diverse group of established and emerging artists. Edits saved in the admin Artists page are shown here automatically."
-    );
-
-    const connection = await getConnection();
-
-    await connection.execute(
-      `
-      UPDATE artists_page_settings
-      SET
-        hero_title = ?,
-        main_title = ?,
-        hero_subtitle = ?,
-        heritage_title = ?,
-        hero_background_url = ?,
-        section_title = ?,
-        section_subtitle = ?
-      WHERE id = 1
-      `,
-      [
-        heroTitle,
-        mainTitle,
-        heroSubtitle,
-        heritageTitle,
-        heroBackgroundUrl,
-        sectionTitle,
-        sectionSubtitle,
-      ]
-    );
-
-    await connection.end();
+    console.error("GET /api/artists-page error:", error);
 
     return NextResponse.json({
       success: true,
-      message: "Artists page updated successfully.",
+      settings: defaultSettings,
     });
-  } catch (error) {
-    console.error("PATCH /api/admin/artists-page error:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Unable to update Artists page.",
-      },
-      { status: 500 }
-    );
   }
 }

@@ -1,102 +1,206 @@
-import { Metadata } from 'next';
-import Link from 'next/link';
-import { Header } from '@/components/landing/header';
-import { Footer } from '@/components/landing/footer';
-import { DEFAULT_ARTISTS, listArtists } from '@/lib/artists';
+"use client";
 
-export const metadata: Metadata = {
-  title: 'Artists - Galeria Butuan City',
-  description: 'Discover talented Filipino artists and their unique artistic expressions at Galeria Butuan City.',
+import { useEffect, useState } from "react";
+import { Footer } from "@/components/landing/footer";
+import { Header } from "@/components/landing/header";
+
+type Artist = {
+  artist_id?: number;
+  id?: number;
+  name?: string;
+  artist_name?: string;
+  alias?: string;
+  bio?: string;
+  image_url?: string;
+  status?: string;
+  featured_work?: string;
 };
 
-export const dynamic = 'force-dynamic';
-
-type PublicArtist = {
-  artist_id: number;
-  name: string;
-  alias: string;
-  bio: string;
-  image_url: string;
-  artworks: number;
-  featured_work: string;
+type ArtistsPageSettings = {
+  hero_title: string;
+  main_title: string;
+  hero_subtitle: string;
+  heritage_title: string;
+  hero_background_url: string;
+  section_title: string;
+  section_subtitle: string;
 };
 
-async function getArtists(): Promise<PublicArtist[]> {
-  try {
-    const artists = await listArtists({ activeOnly: true });
-    return artists.length ? artists : DEFAULT_ARTISTS;
-  } catch {
-    return DEFAULT_ARTISTS;
-  }
+const defaultSettings: ArtistsPageSettings = {
+  hero_title: "FEATURED ARTISTS",
+  main_title: "ARTISTS",
+  hero_subtitle:
+    "Meet the visionaries behind our curated collection of contemporary Filipino art",
+  heritage_title: "CONTEMPORARY FILIPINO ART",
+  hero_background_url: "",
+  section_title: "Featured Artists",
+  section_subtitle:
+    "Our gallery represents a diverse group of established and emerging artists.",
+};
+
+function getArtistName(artist: Artist) {
+  return artist.artist_name || artist.name || artist.alias || "Galeria Artist";
 }
 
-export default async function ArtistsPage() {
-  const artists = await getArtists();
+function getArtistImage(artist: Artist) {
+  return artist.image_url || "";
+}
+
+export default function ArtistsPage() {
+  const [settings, setSettings] =
+    useState<ArtistsPageSettings>(defaultSettings);
+  const [artists, setArtists] = useState<Artist[]>([]);
+
+  useEffect(() => {
+    async function loadPage() {
+      try {
+        const settingsResponse = await fetch(
+          `/api/artists-page?t=${Date.now()}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const artistsResponse = await fetch(`/api/artists?t=${Date.now()}`, {
+          cache: "no-store",
+        });
+
+        const settingsJson = await settingsResponse.json();
+        const artistsJson = await artistsResponse.json();
+
+        if (settingsJson.success && settingsJson.settings) {
+          setSettings({
+            ...defaultSettings,
+            ...settingsJson.settings,
+          });
+        }
+
+        const artistList =
+          artistsJson.artists || artistsJson.data || artistsJson.results || [];
+
+        if (Array.isArray(artistList)) {
+          setArtists(artistList);
+        }
+      } catch {
+        setSettings(defaultSettings);
+      }
+    }
+
+    loadPage();
+  }, []);
+
+  const heroStyle = settings.hero_background_url
+    ? {
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.42), rgba(0,0,0,0.42)), url("${settings.hero_background_url}")`,
+      }
+    : {
+        background:
+          "linear-gradient(135deg, #3b1d12 0%, #4c1d95 50%, #be185d 100%)",
+      };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       <Header />
-      <section className="relative h-96 flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/40 z-10"></div>
-        <div className="absolute inset-0 bg-[url('/images/artists-hero.svg')] bg-cover bg-center"></div>
-        <div className="relative z-20 text-center text-white px-6">
-          <h1 className="text-5xl md:text-6xl font-light tracking-[0.15em] mb-4" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-            ARTISTS
+
+      <main>
+        <section
+          className="relative flex min-h-[430px] items-center justify-center overflow-hidden bg-cover bg-center px-6 pb-24 pt-40 text-center text-white"
+          style={heroStyle}
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_85%,rgba(255,255,255,0.10),transparent_25%)]" />
+
+          <h1 className="pointer-events-none absolute left-1/2 top-14 -translate-x-1/2 whitespace-nowrap font-serif text-6xl font-black uppercase tracking-wide text-white/25 sm:text-7xl md:text-8xl lg:text-9xl">
+            {settings.hero_title}
           </h1>
-          <p className="text-lg md:text-xl max-w-2xl mx-auto text-white/90">
-            Meet the visionaries behind our curated collection of contemporary Filipino art
-          </p>
-        </div>
-      </section>
 
-      <section className="py-20 px-6 md:px-12">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-light tracking-[0.1em] mb-6" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-              Featured Artists
+          <div className="relative z-10 mx-auto max-w-5xl">
+            <h2 className="font-serif text-5xl uppercase tracking-[0.22em] drop-shadow-lg sm:text-6xl">
+              {settings.main_title}
             </h2>
-            <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-              Our gallery represents a diverse group of established and emerging artists. Edits saved in the admin Artists page are shown here automatically.
+
+            <p className="mx-auto mt-8 max-w-3xl text-lg font-semibold leading-8 drop-shadow">
+              {settings.hero_subtitle}
+            </p>
+
+            <p className="mt-4 text-2xl font-bold uppercase tracking-[0.2em] text-white/60 drop-shadow sm:text-3xl">
+              {settings.heritage_title}
             </p>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-            {artists.map((artist) => (
-              <div key={artist.artist_id} className="group cursor-pointer">
-                <div className="relative overflow-hidden rounded-lg mb-4 aspect-[3/4] bg-muted">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <img
-                    src={artist.image_url || '/placeholder-user.jpg'}
-                    alt={artist.name}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 filter grayscale group-hover:grayscale-0"
-                  />
-                </div>
-                <h3 className="text-xl font-medium mb-2 group-hover:text-primary transition-colors">{artist.name}</h3>
-                <p className="text-muted-foreground text-sm mb-2">{artist.alias}</p>
-                <p className="text-sm text-foreground/70 line-clamp-3">{artist.bio}</p>
-                {artist.featured_work ? <p className="text-xs text-muted-foreground mt-3">Featured: {artist.featured_work}</p> : null}
-              </div>
-            ))}
-          </div>
+        <section className="bg-[#14091f] px-6 py-20 text-white sm:px-10 lg:px-16">
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto mb-14 max-w-4xl text-center">
+              <h2 className="font-serif text-4xl tracking-[0.18em] sm:text-5xl">
+                {settings.section_title}
+              </h2>
 
-          <div className="text-center bg-muted/50 rounded-lg p-12">
-            <h3 className="text-2xl md:text-3xl font-light tracking-[0.1em] mb-4" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-              Become a Featured Artist
-            </h3>
-            <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Are you an artist looking to showcase your work? We're always looking for talented creators to join our gallery.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/contact" className="inline-flex items-center justify-center rounded-md bg-foreground text-background px-8 py-3 text-sm font-medium hover:bg-foreground/90 transition-colors">
-                Submit Your Portfolio
-              </Link>
-              <Link href="/shop" className="inline-flex items-center justify-center rounded-md border border-foreground/20 px-8 py-3 text-sm font-medium hover:bg-foreground/5 transition-colors">
-                Browse Artworks
-              </Link>
+              <p className="mt-6 text-lg leading-8 text-white/75">
+                {settings.section_subtitle}
+              </p>
             </div>
+
+            {artists.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/70">
+                No artists available yet.
+              </div>
+            ) : (
+              <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+                {artists.map((artist) => {
+                  const artistName = getArtistName(artist);
+                  const artistImage = getArtistImage(artist);
+
+                  return (
+                    <article
+                      key={artist.artist_id || artist.id || artistName}
+                      className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-2xl shadow-black/20"
+                    >
+                      <div
+                        className="aspect-[4/3] bg-cover bg-center"
+                        style={
+                          artistImage
+                            ? {
+                                backgroundImage: `url("${artistImage}")`,
+                              }
+                            : {
+                                background:
+                                  "linear-gradient(135deg, #3b1d12, #4c1d95, #be185d)",
+                              }
+                        }
+                      />
+
+                      <div className="p-6">
+                        <h3 className="font-serif text-3xl text-white">
+                          {artistName}
+                        </h3>
+
+                        {artist.alias && artist.alias !== artistName && (
+                          <p className="mt-1 text-sm uppercase tracking-[0.18em] text-orange-200">
+                            {artist.alias}
+                          </p>
+                        )}
+
+                        {artist.bio && (
+                          <p className="mt-4 line-clamp-4 leading-7 text-white/75">
+                            {artist.bio}
+                          </p>
+                        )}
+
+                        {artist.featured_work && (
+                          <p className="mt-4 text-sm text-white/60">
+                            Featured work: {artist.featured_work}
+                          </p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
+
       <Footer />
     </div>
   );
