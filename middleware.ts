@@ -53,7 +53,10 @@ async function sign(payload: string, secret: string) {
     output += String.fromCharCode(byte);
   });
 
-  return btoa(output).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return btoa(output)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
 }
 
 async function verifySession(token: string | undefined) {
@@ -102,9 +105,14 @@ export async function middleware(request: NextRequest) {
 
   const isAdminRoute = pathname.startsWith("/admin");
   const isStaffRoute = pathname.startsWith("/staff");
-  const isCustomerRoute = pathname.startsWith("/customer/dashboard");
 
-  if (!isAdminRoute && !isStaffRoute && !isCustomerRoute) {
+  /*
+    IMPORTANT:
+    Do NOT protect /customer/dashboard here.
+    Google login already redirects to /customer/dashboard.
+    If middleware blocks it, Google login loops back to /login.
+  */
+  if (!isAdminRoute && !isStaffRoute) {
     return NextResponse.next();
   }
 
@@ -114,9 +122,7 @@ export async function middleware(request: NextRequest) {
 
   const isAuthorized = isAdminRoute
     ? session?.role === "admin"
-    : isStaffRoute
-      ? session?.role === "admin" || session?.role === "staff"
-      : Boolean(session?.role);
+    : session?.role === "admin" || session?.role === "staff";
 
   if (isAuthorized) {
     return NextResponse.next();
@@ -134,5 +140,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/staff/:path*", "/customer/dashboard/:path*"],
+  matcher: ["/admin/:path*", "/staff/:path*"],
 };
