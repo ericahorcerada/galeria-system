@@ -4,23 +4,26 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Image,
-  Users,
-  ShoppingCart,
-  Package,
   Boxes,
-  Truck,
-  UserCog,
+  ChevronDown,
+  Home,
+  Image,
+  Images,
+  LayoutDashboard,
   LogOut,
   Menu,
-  X,
-  ChevronDown,
-  Palette,
-  Home,
-  Images,
   MessageSquare,
+  Moon,
+  Package,
+  Palette,
+  ShoppingCart,
+  Sun,
+  Truck,
+  UserCog,
+  Users,
+  X,
 } from "lucide-react";
+import { useDarkMode } from "@/contexts/dark-mode-context";
 
 const sidebarItems = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -44,6 +47,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const { theme, toggleTheme } = useDarkMode();
 
   useEffect(() => {
     setIsUserMenuOpen(false);
@@ -89,63 +93,82 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 border-b border-white/40 bg-white/80 backdrop-blur-xl flex items-center justify-between px-3 sm:px-4">
+      <header className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-background/95 px-3 backdrop-blur sm:px-4 lg:hidden">
         <button
           type="button"
           onClick={() => setIsSidebarOpen(true)}
-          className="p-2 -ml-2 rounded-md hover:bg-orange-100"
+          className="rounded-md p-2 -ml-2 hover:bg-muted"
           aria-label="Open admin menu"
         >
           <Menu className="h-5 w-5" />
         </button>
 
-        <span className="font-serif text-lg tracking-wider art-gradient-text">
-          GALERIA
-        </span>
+        <span className="font-serif text-lg tracking-wider">GALERIA</span>
 
-        <div className="w-9" />
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted"
+          aria-label="Toggle dark mode"
+        >
+          {theme === "dark" ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
+        </button>
       </header>
 
       {isSidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       <aside
-        className={`fixed top-0 left-0 z-50 h-dvh w-[min(18rem,86vw)] border-r border-white/20 bg-[linear-gradient(180deg,#2d1238_0%,#6d1d56_42%,#f97316_100%)] text-white shadow-xl transform transition-transform lg:h-screen lg:w-64 lg:shadow-none lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-50 h-dvh w-[min(18rem,86vw)] transform border-r border-border bg-background shadow-xl transition-transform lg:h-screen lg:w-64 lg:translate-x-0 lg:shadow-none ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-16 items-center justify-between px-4 border-b border-white/15">
+        <div className="flex h-14 items-center justify-between border-b border-border px-4">
           <Link
             href="/admin"
             className="flex items-center gap-2"
             onClick={() => setIsSidebarOpen(false)}
           >
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-yellow-300 via-pink-400 to-violet-500 shadow-lg" />
-            <div>
-              <span className="block font-serif text-lg leading-none tracking-wider">
-                GALERIA
-              </span>
-              <span className="text-[10px] uppercase tracking-[0.25em] text-yellow-100">
-                Admin Studio
-              </span>
-            </div>
+            <span className="font-serif text-lg tracking-wider">GALERIA</span>
+            <span className="rounded bg-accent px-1.5 py-0.5 text-xs text-accent-foreground">
+              Admin
+            </span>
           </Link>
 
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen(false)}
-            className="lg:hidden p-1 rounded-md hover:bg-white/10"
-            aria-label="Close admin menu"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="hidden h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:flex"
+              aria-label="Toggle dark mode"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(false)}
+              className="rounded-md p-1 hover:bg-muted lg:hidden"
+              aria-label="Close admin menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
-        <nav className="absolute inset-x-0 top-16 bottom-28 overflow-y-auto overscroll-contain p-3 space-y-1">
+        <nav className="absolute inset-x-0 bottom-24 top-14 space-y-1 overflow-y-auto overscroll-contain p-3">
           {sidebarItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -156,47 +179,41 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-white text-[#481047] shadow-lg shadow-black/20"
-                    : "text-white/75 hover:text-white hover:bg-white/12"
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
-                <item.icon
-                  className={`h-4 w-4 ${
-                    isActive ? "text-pink-600" : "text-yellow-100"
-                  }`}
-                />
+                <item.icon className="h-4 w-4" />
                 {item.name}
               </Link>
             );
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/15">
+        <div className="absolute bottom-0 left-0 right-0 border-t border-border p-3">
           <div ref={userMenuRef} className="relative">
             <button
               type="button"
-              onClick={() => setIsUserMenuOpen((prev) => !prev)}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 transition-colors"
+              onClick={() => setIsUserMenuOpen((previous) => !previous)}
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-muted"
               aria-expanded={isUserMenuOpen}
               aria-haspopup="menu"
             >
-              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-yellow-300 via-pink-400 to-violet-500 flex items-center justify-center text-sm font-black text-white shadow-md">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-semibold">
                 A
               </div>
 
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-semibold truncate text-white">
-                  Admin User
-                </p>
-                <p className="text-xs text-white/65 truncate">
+              <div className="min-w-0 flex-1 text-left">
+                <p className="truncate text-sm font-semibold">Admin User</p>
+                <p className="truncate text-xs text-muted-foreground">
                   admin@galeria.ph
                 </p>
               </div>
 
               <ChevronDown
-                className={`h-4 w-4 text-white/70 transition-transform duration-200 ${
+                className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
                   isUserMenuOpen ? "rotate-180" : ""
                 }`}
               />
@@ -205,13 +222,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             {isUserMenuOpen && (
               <div
                 role="menu"
-                className="absolute left-0 right-0 bottom-full mb-2 z-[60] rounded-xl border border-white/30 bg-white text-foreground shadow-xl overflow-hidden"
+                className="absolute bottom-full left-0 right-0 z-[60] mb-2 overflow-hidden rounded-md border border-border bg-background shadow-lg"
               >
                 <button
                   type="button"
                   role="menuitem"
                   onClick={handleSignOut}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors"
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <LogOut className="h-4 w-4" />
                   Sign out
@@ -222,11 +239,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="min-w-0 lg:pl-64 pt-14 lg:pt-0">
-        <div className="min-h-screen w-full bg-[radial-gradient(circle_at_top_left,rgba(251,146,60,0.16),transparent_30%),radial-gradient(circle_at_top_right,rgba(236,72,153,0.14),transparent_28%),linear-gradient(135deg,rgba(255,247,237,0.95),rgba(253,244,255,0.95))]">
-          <div className="w-full max-w-[1600px] p-3 sm:p-4 md:p-6 lg:p-8">
-            {children}
-          </div>
+      <main className="min-w-0 pt-14 lg:pl-64 lg:pt-0">
+        <div className="w-full max-w-[1600px] p-3 sm:p-4 md:p-6 lg:p-8">
+          {children}
         </div>
       </main>
     </div>

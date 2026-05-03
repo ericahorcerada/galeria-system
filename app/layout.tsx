@@ -5,20 +5,21 @@ import { DarkModeProvider } from '@/contexts/dark-mode-context'
 import { CartProvider } from '@/contexts/cart-context'
 import './globals.css'
 
-const cormorant = Cormorant_Garamond({ 
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-cormorant"
-});
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-cormorant',
+})
 
-const inter = Inter({ 
-  subsets: ["latin"],
-  variable: "--font-inter"
-});
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+})
 
 export const metadata: Metadata = {
   title: 'Galeria Butuan City | Premium Philippine Art Prints & Frames',
-  description: 'Discover authentic Filipino artworks from master artists. Premium prints, custom framing, and art supplies. Celebrating Philippine art heritage.',
+  description:
+    'Discover authentic Filipino artworks from master artists. Premium prints, custom framing, and art supplies. Celebrating Philippine art heritage.',
   icons: {
     icon: [
       {
@@ -45,12 +46,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="bg-background" suppressHydrationWarning>
-      <body className={`${cormorant.variable} ${inter.variable} font-sans antialiased`}>
+      <body
+        className={`${cormorant.variable} ${inter.variable} font-sans antialiased`}
+      >
         <DarkModeProvider>
-          <CartProvider>
-            {children}
-          </CartProvider>
+          <CartProvider>{children}</CartProvider>
         </DarkModeProvider>
+
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
