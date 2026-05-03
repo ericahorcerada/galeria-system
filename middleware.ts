@@ -1,89 +1,157 @@
-import NextAuth, { type NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+const publicRoutes = [
+  "/",
+  "/about",
+  "/artists",
+  "/artwork",
+  "/cart",
+  "/collections",
+  "/feedback",
+  "/inventory",
+  "/login",
+  "/profile",
+  "/sale",
+  "/shop",
+];
 
-  session: {
-    strategy: "jwt",
-  },
+const publicApiRoutes = [
+  "/api/about",
+  "/api/artists",
+  "/api/artists-page",
+  "/api/artworks",
+  "/api/auth",
+  "/api/collections",
+  "/api/feedback",
+  "/api/google-success",
+  "/api/homepage",
+];
 
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-      authorization: {
-        params: {
-          prompt: "select_account",
-          access_type: "offline",
-          response_type: "code",
-        },
-      },
-    }),
-  ],
+function isPublicRoute(pathname: string) {
+  return publicRoutes.some((route) => {
+    if (route === "/") {
+      return pathname === "/";
+    }
 
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
+    return pathname === route || pathname.startsWith(`${route}/`);
+  });
+}
 
-  callbacks: {
-    async signIn({ account, profile }) {
-      if (account?.provider !== "google") {
-        return false;
+function isPublicApiRoute(pathname: string) {
+  return publicApiRoutes.some((route) => {
+    return pathname === route || pathname.startsWith(`${route}/`);
+  });
+}
+
+function getGaleriaSessionRole(request: NextRequest) {
+  const cookieNames = [
+    "galeria_session",
+    "galeria_user",
+    "session",
+    "auth_session",
+    "user_session",
+  ];
+
+  for (const cookieName of cookieNames) {
+    const cookieValue = request.cookies.get(cookieName)?.value;
+
+    if (!cookieValue) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(cookieValue) as { role?: string };
+
+      if (
+        parsed.role === "admin" ||
+        parsed.role === "staff" ||
+        parsed.role === "customer"
+      ) {
+        return parsed.role;
       }
 
-      if (typeof profile?.email !== "string") {
-        return false;
-      }
+      return "unknown";
+    } catch {
+      return "unknown";
+    }
+  }
 
-      return true;
-    },
+  return null;
+}
 
-    async jwt({ token, account, profile }) {
-      if (account?.provider === "google") {
-        token.provider = "google";
-      }
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-      if (typeof profile?.email === "string") {
-        token.email = profile.email;
-      }
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/icon") ||
+    pathname.startsWith("/apple-icon") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
+  }
 
-      if (typeof profile?.name === "string") {
-        token.name = profile.name;
-      }
+  if (isPublicApiRoute(pathname)) {
+    return NextResponse.next();
+  }
 
-      return token;
-    },
+  if (isPublicRoute(pathname)) {
+    return NextResponse.next();
+  }
 
-    async session({ session, token }) {
-      if (session.user) {
-        if (typeof token.email === "string") {
-          session.user.email = token.email;
-        }
+  const galeriaRole = getGaleriaSessionRole(request);
 
-        if (typeof token.name === "string") {
-          session.user.name = token.name;
-        }
-      }
+  const googleToken = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
 
-      return session;
-    },
+  const hasGoogleLogin = typeof googleToken?.email === "string";
 
-    async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) {
-        return `${baseUrl}${url}`;
-      }
+  if (pathname.startsWith("/customer")) {
+    if (
+      galeriaRole === "customer" ||
+      galeriaRole === "admin" ||
+      galeriaRole === "unknown" ||
+      hasGoogleLogin
+    ) {
+      return NextResponse.next();
+    }
 
-      if (url.startsWith(baseUrl)) {
-        return url;
-      }
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
-      return `${baseUrl}/api/google-success`;
-    },
-  },
+  if (pathname.startsWith("/admin")) {
+    if (galeriaRole === "admin" || galeriaRole === "unknown") {
+      return NextResponse.next();
+    }
+
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (pathname.startsWith("/staff")) {
+    if (
+      galeriaRole === "staff" ||
+      galeriaRole === "admin" ||
+      galeriaRole === "unknown"
+    ) {
+      return NextResponse.next();
+    }
+
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
-
-const handler = NextAuth(authOptions);
-
-export { handler as GET, handler as POST };
