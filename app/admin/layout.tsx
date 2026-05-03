@@ -83,6 +83,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
+        cache: "no-store",
       });
     } catch (error) {
       console.error("Logout failed:", error);
@@ -93,8 +94,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Mobile admin header */}
-      <header className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-background/90 px-3 shadow-sm backdrop-blur-xl sm:px-4 lg:hidden">
+      {/* Mobile header */}
+      <header className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-background/95 px-3 shadow-sm backdrop-blur-xl sm:px-4 lg:hidden">
         <button
           type="button"
           onClick={() => setIsSidebarOpen(true)}
@@ -137,33 +138,34 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 h-dvh w-[min(18rem,86vw)] transform overflow-hidden border-r border-white/15 bg-[linear-gradient(180deg,#2c123e_0%,#4b1660_38%,#8b1e71_70%,#f97316_100%)] text-white shadow-2xl transition-transform lg:h-screen lg:w-64 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[min(18rem,86vw)] transform flex-col overflow-hidden border-r border-white/15 bg-[linear-gradient(180deg,#2c123e_0%,#4b1660_35%,#8b1e71_65%,#f97316_100%)] text-white shadow-2xl transition-transform lg:w-64 lg:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(255,197,80,0.22),transparent_35%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(255,197,80,0.20),transparent_38%)]" />
 
-        <div className="relative flex h-16 items-center justify-between border-b border-white/15 px-4">
+        {/* Logo */}
+        <div className="relative flex h-20 shrink-0 items-center justify-between border-b border-white/15 px-4">
           <Link
             href="/admin"
-            className="flex items-center gap-3"
+            className="flex min-w-0 items-center gap-3"
             onClick={() => setIsSidebarOpen(false)}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 via-pink-500 to-violet-600 shadow-lg shadow-pink-950/30">
-              <Palette className="h-5 w-5 text-white" />
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 via-pink-500 to-violet-600 shadow-lg shadow-pink-950/30">
+              <Palette className="h-6 w-6 text-white" />
             </div>
 
-            <div>
-              <span className="block font-serif text-xl leading-none tracking-[0.16em] text-white">
+            <div className="min-w-0">
+              <span className="block truncate font-serif text-xl leading-none tracking-[0.16em] text-white">
                 GALERIA
               </span>
-              <span className="block text-[10px] uppercase tracking-[0.24em] text-orange-100/80">
+              <span className="block truncate text-[10px] uppercase tracking-[0.24em] text-orange-100/80">
                 Admin Studio
               </span>
             </div>
           </Link>
 
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
               onClick={toggleTheme}
@@ -188,7 +190,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <nav className="relative absolute inset-x-0 bottom-28 top-16 space-y-1 overflow-y-auto overscroll-contain p-3">
+        {/* Scrollable menu */}
+        <nav className="relative min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-5">
           {sidebarItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -199,30 +202,36 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsSidebarOpen(false)}
-                className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
+                className={`group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-bold transition-all ${
                   isActive
                     ? "bg-white text-[#3b104e] shadow-xl shadow-black/20"
-                    : "text-white/75 hover:bg-white/12 hover:text-white"
+                    : "text-white/85 hover:bg-white/12 hover:text-white"
                 }`}
               >
                 <span
-                  className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all ${
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all ${
                     isActive
-                      ? "bg-gradient-to-br from-orange-400 via-pink-500 to-violet-600 text-white"
-                      : "bg-white/8 text-orange-100 group-hover:bg-white/15"
+                      ? "bg-gradient-to-br from-orange-400 via-pink-500 to-violet-600 text-white shadow-md"
+                      : "bg-white/10 text-orange-100 group-hover:bg-white/18"
                   }`}
                 >
                   <item.icon className="h-4 w-4" />
                 </span>
 
-                <span>{item.name}</span>
+                <span
+                  className={`truncate ${
+                    isActive ? "text-[#3b104e]" : "text-current"
+                  }`}
+                >
+                  {item.name}
+                </span>
               </Link>
             );
           })}
         </nav>
 
-        {/* User section */}
-        <div className="relative absolute bottom-0 left-0 right-0 border-t border-white/15 p-3">
+        {/* Always visible logout/user section */}
+        <div className="relative shrink-0 border-t border-white/15 bg-black/10 p-3 backdrop-blur">
           <div ref={userMenuRef} className="relative">
             <button
               type="button"
@@ -231,7 +240,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               aria-expanded={isUserMenuOpen}
               aria-haspopup="menu"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-pink-500 to-violet-600 text-sm font-black text-white shadow-md">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-pink-500 to-violet-600 text-sm font-black text-white shadow-md">
                 A
               </div>
 
@@ -239,13 +248,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <p className="truncate text-sm font-bold text-white">
                   Admin User
                 </p>
-                <p className="truncate text-xs text-white/65">
+                <p className="truncate text-xs text-white/70">
                   admin@galeria.ph
                 </p>
               </div>
 
               <ChevronDown
-                className={`h-4 w-4 text-white/70 transition-transform duration-200 ${
+                className={`h-4 w-4 shrink-0 text-white/80 transition-transform duration-200 ${
                   isUserMenuOpen ? "rotate-180" : ""
                 }`}
               />
@@ -260,7 +269,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   type="button"
                   role="menuitem"
                   onClick={handleSignOut}
-                  className="flex w-full items-center gap-3 px-3 py-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
+                  className="flex w-full items-center gap-3 px-3 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
                 >
                   <LogOut className="h-4 w-4" />
                   Sign out
