@@ -167,7 +167,7 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
 
     await signIn("google", {
-      callbackUrl: "/customer/dashboard",
+      callbackUrl: "/api/google-success",
       redirect: true,
     });
   };
