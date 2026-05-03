@@ -41,23 +41,14 @@ type CustomerOrder = {
   created_at?: string;
 };
 
-function getStoredUser(): CustomerUser | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const stored = localStorage.getItem("galeria_user");
-
-    if (!stored) {
-      return null;
-    }
-
-    return JSON.parse(stored) as CustomerUser;
-  } catch {
-    return null;
-  }
-}
+type NextAuthSession = {
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
+  expires?: string;
+};
 
 function getDisplayName(user: CustomerUser | null) {
   return (
@@ -85,16 +76,42 @@ function formatMoney(value?: number) {
 export default function CustomerDashboardPage() {
   const [user, setUser] = useState<CustomerUser | null>(null);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
 
   useEffect(() => {
-    const localUser = getStoredUser();
+    async function loadUser() {
+      setIsLoadingUser(true);
 
-    if (localUser) {
-      setUser(localUser);
-    }
+      try {
+        const googleResponse = await fetch("/api/auth/session", {
+          cache: "no-store",
+        });
 
-    async function loadCurrentUser() {
+        const googleSession = (await googleResponse.json()) as NextAuthSession;
+
+        if (googleSession?.user?.email) {
+          const googleUser: CustomerUser = {
+            role: "customer",
+            provider: "google",
+            name: googleSession.user.name || googleSession.user.email,
+            full_name: googleSession.user.name || googleSession.user.email,
+            email: googleSession.user.email,
+            identifier: googleSession.user.email,
+          };
+
+          setUser(googleUser);
+
+          if (typeof window !== "undefined") {
+            localStorage.setItem("galeria_user", JSON.stringify(googleUser));
+          }
+
+          return;
+        }
+      } catch {
+        // Continue to normal auth check below.
+      }
+
       try {
         const response = await fetch("/api/auth/me", {
           cache: "no-store",
@@ -103,13 +120,50 @@ export default function CustomerDashboardPage() {
         const result = await response.json();
 
         if (response.ok && result.success && result.user) {
-          setUser(result.user);
+          const authUser = result.user as CustomerUser;
+
+          if (authUser.role === "customer") {
+            setUser(authUser);
+
+            if (typeof window !== "undefined") {
+              localStorage.setItem("galeria_user", JSON.stringify(authUser));
+            }
+
+            return;
+          }
         }
       } catch {
-        if (localUser) {
-          setUser(localUser);
+        // Continue to fallback below.
+      }
+
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("galeria_user");
+
+        if (stored) {
+          try {
+            const storedUser = JSON.parse(stored) as CustomerUser;
+
+            if (storedUser.role === "customer") {
+              setUser(storedUser);
+              return;
+            }
+
+            localStorage.removeItem("galeria_user");
+          } catch {
+            localStorage.removeItem("galeria_user");
+          }
         }
       }
+
+      setUser({
+        role: "customer",
+        provider: "google",
+        name: "Customer",
+        email: "Google Account",
+        identifier: "Google Account",
+      });
+
+      setIsLoadingUser(false);
     }
 
     async function loadOrders() {
@@ -135,7 +189,7 @@ export default function CustomerDashboardPage() {
       }
     }
 
-    loadCurrentUser();
+    loadUser().finally(() => setIsLoadingUser(false));
     loadOrders();
   }, []);
 
@@ -168,11 +222,19 @@ export default function CustomerDashboardPage() {
 
   const handleLogout = async () => {
     try {
+      await fetch("/api/auth/signout", {
+        method: "POST",
+      });
+    } catch {
+      // Continue logout cleanup.
+    }
+
+    try {
       await fetch("/api/auth/logout", {
         method: "POST",
       });
     } catch {
-      // ignore logout API error and clear local session anyway
+      // Continue logout cleanup.
     }
 
     if (typeof window !== "undefined") {
@@ -199,11 +261,11 @@ export default function CustomerDashboardPage() {
                 </p>
 
                 <h1 className="mt-2 font-serif text-3xl uppercase tracking-wide sm:text-4xl">
-                  {displayName}
+                  {isLoadingUser ? "Loading..." : displayName}
                 </h1>
 
                 <p className="mt-1 text-sm font-semibold text-white/90">
-                  {displayEmail}
+                  {isLoadingUser ? "Checking account..." : displayEmail}
                 </p>
 
                 <span className="mt-3 inline-flex rounded-full bg-white/20 px-4 py-1 text-xs font-bold">
