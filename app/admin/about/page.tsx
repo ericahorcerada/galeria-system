@@ -187,7 +187,7 @@ export default function AdminAboutPage() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
-              Edit the About hero banner, story section, and gallery image.
+              Edit the top About banner, story text, and gallery image.
             </p>
           </div>
 
@@ -226,7 +226,7 @@ export default function AdminAboutPage() {
           <div>
             <h2 className="text-xl font-black">Hero Banner Content</h2>
             <p className="text-sm text-muted-foreground">
-              This controls the top About section in your screenshot.
+              This controls the top About banner.
             </p>
           </div>
 
@@ -270,7 +270,7 @@ export default function AdminAboutPage() {
               onChange={(event) =>
                 updateField("hero_background_url", event.target.value)
               }
-              placeholder="https://..."
+              placeholder="Paste image URL for the TOP banner"
             />
           </div>
 
@@ -280,7 +280,7 @@ export default function AdminAboutPage() {
               {isUploadingHero ? "Uploading hero image..." : "Upload Hero Image"}
             </span>
             <span className="mt-1 text-xs text-muted-foreground">
-              This image appears behind ABOUT GALERIA.
+              This image appears behind ABOUT GALERIA at the top.
             </span>
 
             <input
@@ -367,7 +367,9 @@ export default function AdminAboutPage() {
                 <p className="font-serif text-4xl uppercase tracking-[0.25em]">
                   {form.hero_title.replace("GALERIA", "").trim() || "ABOUT"}
                 </p>
+
                 <p className="mt-5 font-semibold">{form.hero_subtitle}</p>
+
                 <p className="mt-4 text-xl font-black uppercase tracking-[0.18em] text-white/40">
                   {form.heritage_title}
                 </p>
@@ -375,7 +377,7 @@ export default function AdminAboutPage() {
             </div>
 
             <div className="p-4 text-sm text-muted-foreground">
-              Live preview of the top About hero banner.
+              Live preview of the TOP About banner.
             </div>
           </div>
 
@@ -418,7 +420,7 @@ export default function AdminAboutPage() {
                   onChange={(event) =>
                     updateField("image_url", event.target.value)
                   }
-                  placeholder="https://..."
+                  placeholder="Paste image URL for lower gallery image"
                 />
               </div>
 
@@ -471,6 +473,7 @@ export default function AdminAboutPage() {
                 <h3 className="font-serif text-3xl font-bold">
                   {form.image_title}
                 </h3>
+
                 <p className="mt-3 text-xs font-bold uppercase tracking-[0.22em] text-white/75">
                   {form.image_subtitle}
                 </p>
