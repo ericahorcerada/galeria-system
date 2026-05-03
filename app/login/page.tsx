@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { motion } from "framer-motion";
-import { signIn } from "next-auth/react";
 import {
   ArrowRight,
   Briefcase,
@@ -13,6 +12,7 @@ import {
   Phone,
   ShieldCheck,
   User,
+  type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Footer } from "@/components/landing/footer";
@@ -45,7 +45,7 @@ const roleOptions: Array<{
   role: LoginRole;
   title: string;
   description: string;
-  icon: typeof User;
+  icon: LucideIcon;
   credentials?: { email: string; password: string };
 }> = [
   {
@@ -134,6 +134,7 @@ export default function LoginPage() {
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const selectRole = (role: LoginRole) => {
     setSelectedRole(role);
@@ -159,7 +160,16 @@ export default function LoginPage() {
     }));
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleGoogleContinue = () => {
+    setFormError("");
+    setFormSuccess("");
+    setIsGoogleLoading(true);
+
+    window.location.href =
+      "/api/auth/signin/google?callbackUrl=%2Fcustomer%2Fdashboard";
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setFormError("");
@@ -270,16 +280,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleContinue = async () => {
-  setFormError("");
-  setFormSuccess("");
-
-  await signIn("google", {
-    callbackUrl: "/customer/dashboard",
-  });
-};
-
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
     setFormData((currentForm) => ({
@@ -359,12 +360,15 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={handleGoogleContinue}
-                  className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted"
+                  disabled={isGoogleLoading}
+                  className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#4285f4] shadow-sm">
                     G
                   </span>
-                  Continue with Google
+                  {isGoogleLoading
+                    ? "Opening Google..."
+                    : "Continue with Google"}
                 </button>
 
                 <div className="my-5 flex items-center gap-3">
