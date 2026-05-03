@@ -30,18 +30,34 @@ const navItems = [
   { label: "Feedback", href: "/feedback" },
 ];
 
-function isValidUser(value: unknown): value is LoggedUser {
-  if (!value || typeof value !== "object") {
-    return false;
+function readStoredUser(): LoggedUser | null {
+  if (typeof window === "undefined") {
+    return null;
   }
 
-  const user = value as LoggedUser;
+  try {
+    const stored = localStorage.getItem("galeria_user");
 
-  return (
-    user.role === "customer" ||
-    user.role === "staff" ||
-    user.role === "admin"
-  );
+    if (!stored) {
+      return null;
+    }
+
+    const parsed = JSON.parse(stored) as LoggedUser;
+
+    if (
+      parsed.role === "customer" ||
+      parsed.role === "staff" ||
+      parsed.role === "admin"
+    ) {
+      return parsed;
+    }
+
+    localStorage.removeItem("galeria_user");
+    return null;
+  } catch {
+    localStorage.removeItem("galeria_user");
+    return null;
+  }
 }
 
 export function Header() {
@@ -63,67 +79,9 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    function refreshHeaderState() {
+      setUser(readStoredUser());
 
-    async function loadUser() {
-      /*
-        IMPORTANT:
-        Do NOT trust localStorage alone.
-        If the user clicked logout, old localStorage can still make the header
-        think the user is logged in. So we check the real server session first.
-      */
-
-      try {
-        const sessionResponse = await fetch("/api/auth/session", {
-          cache: "no-store",
-        });
-
-        const session = await sessionResponse.json();
-
-        if (!cancelled && session?.user?.email) {
-          const googleUser: LoggedUser = {
-            role: "customer",
-            provider: "google",
-            name: session.user.name || session.user.email,
-            email: session.user.email,
-            identifier: session.user.email,
-          };
-
-          setUser(googleUser);
-          localStorage.setItem("galeria_user", JSON.stringify(googleUser));
-          return;
-        }
-      } catch {
-        // Continue to custom auth check.
-      }
-
-      try {
-        const response = await fetch("/api/auth/me", {
-          cache: "no-store",
-        });
-
-        const result = await response.json();
-
-        if (!cancelled && response.ok && result.success && isValidUser(result.user)) {
-          setUser(result.user);
-          localStorage.setItem("galeria_user", JSON.stringify(result.user));
-          return;
-        }
-      } catch {
-        // Continue to logged-out state.
-      }
-
-      /*
-        If no Google session and no custom app session:
-        user is logged out. Remove stale old admin/customer data.
-      */
-      if (!cancelled) {
-        setUser(null);
-        localStorage.removeItem("galeria_user");
-      }
-    }
-
-    function loadCartCount() {
       try {
         const cart = localStorage.getItem("galeria_cart");
 
@@ -150,16 +108,16 @@ export function Header() {
       }
     }
 
-    loadUser();
-    loadCartCount();
+    refreshHeaderState();
 
-    window.addEventListener("storage", loadCartCount);
-    window.addEventListener("focus", loadUser);
+    window.addEventListener("storage", refreshHeaderState);
+    window.addEventListener("focus", refreshHeaderState);
+    window.addEventListener("galeria-auth-change", refreshHeaderState);
 
     return () => {
-      cancelled = true;
-      window.removeEventListener("storage", loadCartCount);
-      window.removeEventListener("focus", loadUser);
+      window.removeEventListener("storage", refreshHeaderState);
+      window.removeEventListener("focus", refreshHeaderState);
+      window.removeEventListener("galeria-auth-change", refreshHeaderState);
     };
   }, [pathname]);
 
