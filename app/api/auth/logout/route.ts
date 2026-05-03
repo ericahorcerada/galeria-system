@@ -1,5 +1,22 @@
 import { NextResponse } from "next/server";
-import { clearSessionCookie } from "@/lib/session";
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export async function POST() { await clearSessionCookie(); return NextResponse.json({ success: true }); }
+
+export async function POST() {
+  const response = NextResponse.json({
+    success: true,
+    message: "Logged out successfully",
+  });
+
+  response.cookies.set("auth_token", "", {
+    httpOnly: true,
+    expires: new Date(0),
+    path: "/",
+  });
+
+  response.cookies.set("session", "", {
+    httpOnly: true,
+    expires: new Date(0),
+    path: "/",
+  });
+
+  return response;
+}

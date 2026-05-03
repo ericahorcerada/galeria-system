@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -21,7 +21,6 @@ import {
   Images,
   MessageSquare,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const sidebarItems = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -44,11 +43,52 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setIsUserMenuOpen(false);
+    setIsSidebarOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
   const handleSignOut = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      window.location.href = "/login";
+    }
   };
 
   return (
@@ -56,19 +96,23 @@ export default function AdminLayout({
       {/* Mobile header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-background/95 backdrop-blur border-b border-border flex items-center justify-between px-3 sm:px-4">
         <button
+          type="button"
           onClick={() => setIsSidebarOpen(true)}
-          className="p-2 -ml-2 rounded-md hover:bg-muted" aria-label="Open admin menu"
+          className="p-2 -ml-2 rounded-md hover:bg-muted"
+          aria-label="Open admin menu"
         >
           <Menu className="h-5 w-5" />
         </button>
+
         <span className="font-serif text-lg tracking-wider">GALERIA</span>
+
         <div className="w-9" />
       </header>
 
       {/* Sidebar overlay */}
       {isSidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-50 bg-black/50"
+          className="lg:hidden fixed inset-0 z-40 bg-black/50"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -80,13 +124,22 @@ export default function AdminLayout({
         }`}
       >
         <div className="flex h-14 items-center justify-between px-4 border-b border-border">
-          <Link href="/admin" className="flex items-center gap-2">
-            <span className="font-serif text-lg tracking-wider">GALERIA</span>
-            <span className="text-xs bg-accent text-accent-foreground px-1.5 py-0.5 rounded">Admin</span>
-          </Link>
-          <button
+          <Link
+            href="/admin"
+            className="flex items-center gap-2"
             onClick={() => setIsSidebarOpen(false)}
-            className="lg:hidden p-1 rounded-md hover:bg-muted" aria-label="Close admin menu"
+          >
+            <span className="font-serif text-lg tracking-wider">GALERIA</span>
+            <span className="text-xs bg-accent text-accent-foreground px-1.5 py-0.5 rounded">
+              Admin
+            </span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(false)}
+            className="lg:hidden p-1 rounded-md hover:bg-muted"
+            aria-label="Close admin menu"
           >
             <X className="h-5 w-5" />
           </button>
@@ -94,8 +147,10 @@ export default function AdminLayout({
 
         <nav className="absolute inset-x-0 top-14 bottom-24 overflow-y-auto overscroll-contain p-3 space-y-1">
           {sidebarItems.map((item) => {
-            const isActive = pathname === item.href || 
+            const isActive =
+              pathname === item.href ||
               (item.href !== "/admin" && pathname.startsWith(item.href));
+
             return (
               <Link
                 key={item.name}
@@ -116,26 +171,49 @@ export default function AdminLayout({
 
         {/* User section */}
         <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-border">
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-              A
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">Admin User</p>
-              <p className="text-xs text-muted-foreground truncate">admin@galeria.ph</p>
-            </div>
-            <button className="p-1.5 text-muted-foreground hover:text-foreground">
-              <ChevronDown className="h-4 w-4" />
+          <div ref={userMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsUserMenuOpen((prev) => !prev)}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted transition-colors"
+              aria-expanded={isUserMenuOpen}
+              aria-haspopup="menu"
+            >
+              <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-semibold">
+                A
+              </div>
+
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-semibold truncate">Admin User</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  admin@galeria.ph
+                </p>
+              </div>
+
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                  isUserMenuOpen ? "rotate-180" : ""
+                }`}
+              />
             </button>
+
+            {isUserMenuOpen && (
+              <div
+                role="menu"
+                className="absolute left-0 right-0 bottom-full mb-2 z-[60] rounded-md border border-border bg-background shadow-lg overflow-hidden"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleSignOut}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </button>
+              </div>
+            )}
           </div>
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 mt-1 text-muted-foreground hover:text-foreground"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </Button>
         </div>
       </aside>
 
