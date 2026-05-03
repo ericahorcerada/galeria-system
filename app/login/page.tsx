@@ -2,6 +2,7 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { motion } from "framer-motion";
+import { signIn } from "next-auth/react";
 import {
   ArrowRight,
   Briefcase,
@@ -134,6 +135,7 @@ export default function LoginPage() {
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const selectRole = (role: LoginRole) => {
     setSelectedRole(role);
@@ -157,6 +159,17 @@ export default function LoginPage() {
       email: "",
       password: "",
     }));
+  };
+
+  const handleGoogleLogin = async () => {
+    setFormError("");
+    setFormSuccess("");
+    setIsGoogleLoading(true);
+
+    await signIn("google", {
+      callbackUrl: "/customer/dashboard",
+      redirect: true,
+    });
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -347,15 +360,19 @@ export default function LoginPage() {
 
             {!isSignUp && selectedRole === "customer" && (
               <div className="mb-5">
-                <a
-                  href="/api/auth/signin/google?callbackUrl=%2Fcustomer%2Fdashboard"
-                  className="relative z-50 flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted"
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={isGoogleLoading}
+                  className="relative z-50 flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#4285f4] shadow-sm">
                     G
                   </span>
-                  Continue with Google
-                </a>
+                  {isGoogleLoading
+                    ? "Opening Google..."
+                    : "Continue with Google"}
+                </button>
 
                 <div className="my-5 flex items-center gap-3">
                   <div className="h-px flex-1 bg-border" />
