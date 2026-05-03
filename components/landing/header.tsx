@@ -30,22 +30,18 @@ const navItems = [
   { label: "Feedback", href: "/feedback" },
 ];
 
-function getStoredUser(): LoggedUser | null {
-  if (typeof window === "undefined") {
-    return null;
+function isValidUser(value: unknown): value is LoggedUser {
+  if (!value || typeof value !== "object") {
+    return false;
   }
 
-  try {
-    const stored = localStorage.getItem("galeria_user");
+  const user = value as LoggedUser;
 
-    if (!stored) {
-      return null;
-    }
-
-    return JSON.parse(stored) as LoggedUser;
-  } catch {
-    return null;
-  }
+  return (
+    user.role === "customer" ||
+    user.role === "staff" ||
+    user.role === "admin"
+  );
 }
 
 export function Header() {
@@ -67,12 +63,15 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    async function loadUser() {
-      const localUser = getStoredUser();
+    let cancelled = false;
 
-      if (localUser?.role) {
-        setUser(localUser);
-      }
+    async function loadUser() {
+      /*
+        IMPORTANT:
+        Do NOT trust localStorage alone.
+        If the user clicked logout, old localStorage can still make the header
+        think the user is logged in. So we check the real server session first.
+      */
 
       try {
         const sessionResponse = await fetch("/api/auth/session", {
@@ -81,7 +80,7 @@ export function Header() {
 
         const session = await sessionResponse.json();
 
-        if (session?.user?.email) {
+        if (!cancelled && session?.user?.email) {
           const googleUser: LoggedUser = {
             role: "customer",
             provider: "google",
@@ -95,7 +94,7 @@ export function Header() {
           return;
         }
       } catch {
-        // keep local user fallback
+        // Continue to custom auth check.
       }
 
       try {
@@ -105,13 +104,22 @@ export function Header() {
 
         const result = await response.json();
 
-        if (response.ok && result.success && result.user) {
+        if (!cancelled && response.ok && result.success && isValidUser(result.user)) {
           setUser(result.user);
           localStorage.setItem("galeria_user", JSON.stringify(result.user));
           return;
         }
       } catch {
-        // keep local user fallback
+        // Continue to logged-out state.
+      }
+
+      /*
+        If no Google session and no custom app session:
+        user is logged out. Remove stale old admin/customer data.
+      */
+      if (!cancelled) {
+        setUser(null);
+        localStorage.removeItem("galeria_user");
       }
     }
 
@@ -146,9 +154,12 @@ export function Header() {
     loadCartCount();
 
     window.addEventListener("storage", loadCartCount);
+    window.addEventListener("focus", loadUser);
 
     return () => {
+      cancelled = true;
       window.removeEventListener("storage", loadCartCount);
+      window.removeEventListener("focus", loadUser);
     };
   }, [pathname]);
 
@@ -225,27 +236,20 @@ export function Header() {
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
 
-          {/* 
-            IMPORTANT:
-            If user is already logged in, DO NOT show the login icon.
-            This prevents the header from looking like the customer is logged out.
-          */}
-          {!user && (
+          {user ? (
+            <Link
+              href={dashboardHref}
+              className="hidden rounded-full border border-border px-3 py-1.5 text-xs font-bold text-foreground transition hover:border-primary hover:text-primary sm:inline-flex"
+            >
+              Dashboard
+            </Link>
+          ) : (
             <Link
               href="/login"
               className="text-foreground transition hover:text-primary"
               aria-label="Login"
             >
               <User className="h-5 w-5" />
-            </Link>
-          )}
-
-          {user && (
-            <Link
-              href={dashboardHref}
-              className="hidden rounded-full border border-border px-3 py-1.5 text-xs font-bold text-foreground transition hover:border-primary hover:text-primary sm:inline-flex"
-            >
-              Dashboard
             </Link>
           )}
 
