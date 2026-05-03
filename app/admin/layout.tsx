@@ -92,23 +92,31 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-background/95 px-3 backdrop-blur sm:px-4 lg:hidden">
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Mobile admin header */}
+      <header className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-background/90 px-3 shadow-sm backdrop-blur-xl sm:px-4 lg:hidden">
         <button
           type="button"
           onClick={() => setIsSidebarOpen(true)}
-          className="rounded-md p-2 -ml-2 hover:bg-muted"
+          className="-ml-2 rounded-xl p-2 text-foreground hover:bg-muted"
           aria-label="Open admin menu"
         >
           <Menu className="h-5 w-5" />
         </button>
 
-        <span className="font-serif text-lg tracking-wider">GALERIA</span>
+        <Link href="/admin" className="text-center">
+          <span className="block font-serif text-lg tracking-[0.18em] art-gradient-text">
+            GALERIA
+          </span>
+          <span className="block text-[9px] uppercase tracking-[0.28em] text-muted-foreground">
+            Admin Studio
+          </span>
+        </Link>
 
         <button
           type="button"
           onClick={toggleTheme}
-          className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-foreground hover:bg-muted"
           aria-label="Toggle dark mode"
         >
           {theme === "dark" ? (
@@ -119,6 +127,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </button>
       </header>
 
+      {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -126,28 +135,39 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         />
       )}
 
+      {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 h-dvh w-[min(18rem,86vw)] transform border-r border-border bg-background shadow-xl transition-transform lg:h-screen lg:w-64 lg:translate-x-0 lg:shadow-none ${
+        className={`fixed left-0 top-0 z-50 h-dvh w-[min(18rem,86vw)] transform overflow-hidden border-r border-white/15 bg-[linear-gradient(180deg,#2c123e_0%,#4b1660_38%,#8b1e71_70%,#f97316_100%)] text-white shadow-2xl transition-transform lg:h-screen lg:w-64 lg:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-14 items-center justify-between border-b border-border px-4">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(255,197,80,0.22),transparent_35%)]" />
+
+        <div className="relative flex h-16 items-center justify-between border-b border-white/15 px-4">
           <Link
             href="/admin"
-            className="flex items-center gap-2"
+            className="flex items-center gap-3"
             onClick={() => setIsSidebarOpen(false)}
           >
-            <span className="font-serif text-lg tracking-wider">GALERIA</span>
-            <span className="rounded bg-accent px-1.5 py-0.5 text-xs text-accent-foreground">
-              Admin
-            </span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 via-pink-500 to-violet-600 shadow-lg shadow-pink-950/30">
+              <Palette className="h-5 w-5 text-white" />
+            </div>
+
+            <div>
+              <span className="block font-serif text-xl leading-none tracking-[0.16em] text-white">
+                GALERIA
+              </span>
+              <span className="block text-[10px] uppercase tracking-[0.24em] text-orange-100/80">
+                Admin Studio
+              </span>
+            </div>
           </Link>
 
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={toggleTheme}
-              className="hidden h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:flex"
+              className="hidden h-9 w-9 items-center justify-center rounded-xl text-white/80 hover:bg-white/10 hover:text-white lg:flex"
               aria-label="Toggle dark mode"
             >
               {theme === "dark" ? (
@@ -160,7 +180,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => setIsSidebarOpen(false)}
-              className="rounded-md p-1 hover:bg-muted lg:hidden"
+              className="rounded-xl p-1.5 text-white/80 hover:bg-white/10 hover:text-white lg:hidden"
               aria-label="Close admin menu"
             >
               <X className="h-5 w-5" />
@@ -168,7 +188,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <nav className="absolute inset-x-0 bottom-24 top-14 space-y-1 overflow-y-auto overscroll-contain p-3">
+        <nav className="relative absolute inset-x-0 bottom-28 top-16 space-y-1 overflow-y-auto overscroll-contain p-3">
           {sidebarItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -179,41 +199,53 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 key={item.name}
                 href={item.href}
                 onClick={() => setIsSidebarOpen(false)}
-                className={`flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors ${
+                className={`group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition-all ${
                   isActive
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-white text-[#3b104e] shadow-xl shadow-black/20"
+                    : "text-white/75 hover:bg-white/12 hover:text-white"
                 }`}
               >
-                <item.icon className="h-4 w-4" />
-                {item.name}
+                <span
+                  className={`flex h-8 w-8 items-center justify-center rounded-xl transition-all ${
+                    isActive
+                      ? "bg-gradient-to-br from-orange-400 via-pink-500 to-violet-600 text-white"
+                      : "bg-white/8 text-orange-100 group-hover:bg-white/15"
+                  }`}
+                >
+                  <item.icon className="h-4 w-4" />
+                </span>
+
+                <span>{item.name}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 border-t border-border p-3">
+        {/* User section */}
+        <div className="relative absolute bottom-0 left-0 right-0 border-t border-white/15 p-3">
           <div ref={userMenuRef} className="relative">
             <button
               type="button"
               onClick={() => setIsUserMenuOpen((previous) => !previous)}
-              className="flex w-full items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-muted"
+              className="flex w-full items-center gap-3 rounded-2xl bg-white/10 px-3 py-3 text-left backdrop-blur transition-colors hover:bg-white/15"
               aria-expanded={isUserMenuOpen}
               aria-haspopup="menu"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-semibold">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 via-pink-500 to-violet-600 text-sm font-black text-white shadow-md">
                 A
               </div>
 
-              <div className="min-w-0 flex-1 text-left">
-                <p className="truncate text-sm font-semibold">Admin User</p>
-                <p className="truncate text-xs text-muted-foreground">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-white">
+                  Admin User
+                </p>
+                <p className="truncate text-xs text-white/65">
                   admin@galeria.ph
                 </p>
               </div>
 
               <ChevronDown
-                className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                className={`h-4 w-4 text-white/70 transition-transform duration-200 ${
                   isUserMenuOpen ? "rotate-180" : ""
                 }`}
               />
@@ -222,13 +254,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             {isUserMenuOpen && (
               <div
                 role="menu"
-                className="absolute bottom-full left-0 right-0 z-[60] mb-2 overflow-hidden rounded-md border border-border bg-background shadow-lg"
+                className="absolute bottom-full left-0 right-0 z-[60] mb-2 overflow-hidden rounded-2xl border border-white/20 bg-white text-foreground shadow-2xl"
               >
                 <button
                   type="button"
                   role="menuitem"
                   onClick={handleSignOut}
-                  className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="flex w-full items-center gap-3 px-3 py-3 text-sm font-semibold text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
                 >
                   <LogOut className="h-4 w-4" />
                   Sign out
@@ -239,9 +271,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
+      {/* Main content */}
       <main className="min-w-0 pt-14 lg:pl-64 lg:pt-0">
-        <div className="w-full max-w-[1600px] p-3 sm:p-4 md:p-6 lg:p-8">
-          {children}
+        <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.12),transparent_30%),radial-gradient(circle_at_top_right,rgba(236,72,153,0.10),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.09),transparent_30%)]">
+          <div className="w-full max-w-[1600px] p-3 sm:p-4 md:p-6 lg:p-8">
+            {children}
+          </div>
         </div>
       </main>
     </div>
