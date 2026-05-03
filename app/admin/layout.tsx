@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Boxes,
+  Brush,
   ChevronDown,
   Home,
   Image,
@@ -31,6 +32,7 @@ const sidebarItems = [
   { name: "About", href: "/admin/about", icon: Info },
   { name: "Artworks", href: "/admin/artworks", icon: Image },
   { name: "Artists", href: "/admin/artists", icon: Palette },
+  { name: "Artists Hero", href: "/admin/artists-page", icon: Brush },
   { name: "Homepage", href: "/admin/homepage", icon: Home },
   { name: "Collections", href: "/admin/collections", icon: Images },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
