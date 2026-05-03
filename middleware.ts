@@ -46,6 +46,7 @@ function isPublicApiRoute(pathname: string) {
 function hasCustomSession(request: NextRequest) {
   const possibleCookieNames = [
     "galeria_session",
+    "galeria_user",
     "session",
     "auth_session",
     "user_session",
@@ -84,15 +85,10 @@ export async function middleware(request: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   });
 
-  const googleRole = googleToken?.role;
-  const googleProvider = googleToken?.provider;
-
-  const isGoogleCustomer =
-    typeof googleToken?.email === "string" &&
-    (googleRole === "customer" || googleProvider === "google");
+  const googleCustomerExists = typeof googleToken?.email === "string";
 
   if (pathname.startsWith("/customer")) {
-    if (customSessionExists || isGoogleCustomer) {
+    if (customSessionExists || googleCustomerExists) {
       return NextResponse.next();
     }
 
