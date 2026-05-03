@@ -9,6 +9,7 @@ import {
   Home,
   Image,
   Images,
+  Info,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -27,6 +28,7 @@ import { useDarkMode } from "@/contexts/dark-mode-context";
 
 const sidebarItems = [
   { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { name: "About", href: "/admin/about", icon: Info },
   { name: "Artworks", href: "/admin/artworks", icon: Image },
   { name: "Artists", href: "/admin/artists", icon: Palette },
   { name: "Homepage", href: "/admin/homepage", icon: Home },
