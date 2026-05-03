@@ -44,7 +44,11 @@ const DEFAULT_HOMEPAGE: Required<HomepageData> = {
   featuredImage: "",
 };
 
-function getValue(source: Record<string, unknown>, keys: string[], fallback: string) {
+function getValue(
+  source: Record<string, unknown>,
+  keys: string[],
+  fallback: string
+) {
   for (const key of keys) {
     const value = source[key];
 
@@ -122,22 +126,42 @@ function normalizeHomepageData(rawData: unknown): Required<HomepageData> {
     ),
     primaryButtonText: getValue(
       source,
-      ["primaryButtonText", "primary_button_text", "primaryText", "primary_text"],
+      [
+        "primaryButtonText",
+        "primary_button_text",
+        "primaryText",
+        "primary_text",
+      ],
       DEFAULT_HOMEPAGE.primaryButtonText
     ),
     primaryButtonLink: getValue(
       source,
-      ["primaryButtonLink", "primary_button_link", "primaryLink", "primary_link"],
+      [
+        "primaryButtonLink",
+        "primary_button_link",
+        "primaryLink",
+        "primary_link",
+      ],
       DEFAULT_HOMEPAGE.primaryButtonLink
     ),
     secondaryButtonText: getValue(
       source,
-      ["secondaryButtonText", "secondary_button_text", "secondaryText", "secondary_text"],
+      [
+        "secondaryButtonText",
+        "secondary_button_text",
+        "secondaryText",
+        "secondary_text",
+      ],
       DEFAULT_HOMEPAGE.secondaryButtonText
     ),
     secondaryButtonLink: getValue(
       source,
-      ["secondaryButtonLink", "secondary_button_link", "secondaryLink", "secondary_link"],
+      [
+        "secondaryButtonLink",
+        "secondary_button_link",
+        "secondaryLink",
+        "secondary_link",
+      ],
       DEFAULT_HOMEPAGE.secondaryButtonLink
     ),
     backgroundImageUrl,
@@ -171,7 +195,9 @@ function isUsableImageUrl(url: string) {
 }
 
 export function Hero() {
-  const [homepage, setHomepage] = useState<Required<HomepageData>>(DEFAULT_HOMEPAGE);
+  const [homepage, setHomepage] =
+    useState<Required<HomepageData>>(DEFAULT_HOMEPAGE);
+
   const [backgroundFailed, setBackgroundFailed] = useState(false);
   const [featuredFailed, setFeaturedFailed] = useState(false);
 
@@ -219,20 +245,23 @@ export function Hero() {
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-[#160900] text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(219,170,82,0.42),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(120,64,16,0.35),transparent_30%),linear-gradient(135deg,#0f0600_0%,#2b1404_42%,#704612_100%)]" />
-
+      {/* Background image */}
       {showBackgroundImage && (
         <img
           src={homepage.backgroundImageUrl}
           alt="Galeria background artwork"
-          className="absolute inset-0 h-full w-full object-cover opacity-70"
+          className="absolute inset-0 h-full w-full object-cover opacity-90"
           onError={() => setBackgroundFailed(true)}
         />
       )}
 
-      <div className="absolute inset-0 bg-black/45" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/45 to-black/20" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+      {/* Soft warm tint */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_22%,rgba(201,166,107,0.14),transparent_42%),linear-gradient(90deg,rgba(18,15,13,0.22)_0%,rgba(18,15,13,0.14)_45%,rgba(18,15,13,0.08)_100%)]" />
+
+      {/* Lighter overlays */}
+      <div className="absolute inset-0 bg-black/16" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/38 via-black/18 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/32 via-transparent to-transparent" />
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-7xl items-center px-6 pb-16 pt-28 lg:px-8">
         <div className="grid w-full items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
