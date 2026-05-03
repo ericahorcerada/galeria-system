@@ -17,6 +17,7 @@ const authOptions: NextAuthOptions = {
           prompt: "select_account",
           access_type: "offline",
           response_type: "code",
+          scope: "openid email profile",
         },
       },
     }),
@@ -29,11 +30,17 @@ const authOptions: NextAuthOptions = {
 
   callbacks: {
     async signIn({ account, profile }) {
+      const googleProfile = profile as
+        | {
+            email?: unknown;
+          }
+        | undefined;
+
       if (account?.provider !== "google") {
         return false;
       }
 
-      if (!profile?.email) {
+      if (typeof googleProfile?.email !== "string") {
         return false;
       }
 
@@ -41,9 +48,23 @@ const authOptions: NextAuthOptions = {
     },
 
     async jwt({ token, account, profile }) {
+      const googleProfile = profile as
+        | {
+            email?: unknown;
+            name?: unknown;
+          }
+        | undefined;
+
       if (account?.provider === "google") {
-        token.email = token.email || profile?.email;
-        token.name = token.name || profile?.name;
+        token.provider = "google";
+      }
+
+      if (typeof googleProfile?.email === "string") {
+        token.email = googleProfile.email;
+      }
+
+      if (typeof googleProfile?.name === "string") {
+        token.name = googleProfile.name;
       }
 
       return token;
@@ -64,6 +85,14 @@ const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
+      if (url.includes("/api/google-success")) {
+        return `${baseUrl}/api/google-success`;
+      }
+
+      if (url.includes("/customer/dashboard")) {
+        return `${baseUrl}/api/google-success`;
+      }
+
       if (url.startsWith("/")) {
         return `${baseUrl}${url}`;
       }
@@ -72,7 +101,7 @@ const authOptions: NextAuthOptions = {
         return url;
       }
 
-      return `${baseUrl}/customer/dashboard`;
+      return `${baseUrl}/api/google-success`;
     },
   },
 };

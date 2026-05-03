@@ -1,157 +1,138 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 
-const publicRoutes = [
-  "/",
-  "/about",
-  "/artists",
-  "/artwork",
-  "/cart",
-  "/collections",
-  "/feedback",
-  "/inventory",
-  "/login",
-  "/profile",
-  "/sale",
-  "/shop",
-];
+const SESSION_COOKIE = "galeria_session";
 
-const publicApiRoutes = [
-  "/api/about",
-  "/api/artists",
-  "/api/artists-page",
-  "/api/artworks",
-  "/api/auth",
-  "/api/collections",
-  "/api/feedback",
-  "/api/google-success",
-  "/api/homepage",
-];
+type SessionPayload = {
+  id: number;
+  role: "customer" | "staff" | "admin";
+  exp: number;
+};
 
-function isPublicRoute(pathname: string) {
-  return publicRoutes.some((route) => {
-    if (route === "/") {
-      return pathname === "/";
-    }
-
-    return pathname === route || pathname.startsWith(`${route}/`);
-  });
+function getSecret() {
+  return process.env.SESSION_SECRET || process.env.DB_ADMIN_TOKEN || "";
 }
 
-function isPublicApiRoute(pathname: string) {
-  return publicApiRoutes.some((route) => {
-    return pathname === route || pathname.startsWith(`${route}/`);
-  });
-}
+function base64urlToBytes(input: string) {
+  const base64 = input
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .padEnd(Math.ceil(input.length / 4) * 4, "=");
 
-function getGaleriaSessionRole(request: NextRequest) {
-  const cookieNames = [
-    "galeria_session",
-    "galeria_user",
-    "session",
-    "auth_session",
-    "user_session",
-  ];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
 
-  for (const cookieName of cookieNames) {
-    const cookieValue = request.cookies.get(cookieName)?.value;
-
-    if (!cookieValue) {
-      continue;
-    }
-
-    try {
-      const parsed = JSON.parse(cookieValue) as { role?: string };
-
-      if (
-        parsed.role === "admin" ||
-        parsed.role === "staff" ||
-        parsed.role === "customer"
-      ) {
-        return parsed.role;
-      }
-
-      return "unknown";
-    } catch {
-      return "unknown";
-    }
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
   }
 
-  return null;
+  return bytes;
+}
+
+async function sign(payload: string, secret: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    {
+      name: "HMAC",
+      hash: "SHA-256",
+    },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(payload)
+  );
+
+  const bytes = new Uint8Array(signature);
+  let output = "";
+
+  bytes.forEach((byte) => {
+    output += String.fromCharCode(byte);
+  });
+
+  return btoa(output).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+async function verifySession(token: string | undefined) {
+  if (!token) {
+    return null;
+  }
+
+  const secret = getSecret();
+
+  if (!secret) {
+    return null;
+  }
+
+  const [payload, signature] = token.split(".");
+
+  if (!payload || !signature) {
+    return null;
+  }
+
+  const expectedSignature = await sign(payload, secret);
+
+  if (signature !== expectedSignature) {
+    return null;
+  }
+
+  try {
+    const decoded = new TextDecoder().decode(base64urlToBytes(payload));
+    const session = JSON.parse(decoded) as SessionPayload;
+
+    if (!session.id || !session.role || !session.exp) {
+      return null;
+    }
+
+    if (session.exp < Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+
+    return session;
+  } catch {
+    return null;
+  }
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon") ||
-    pathname.startsWith("/icon") ||
-    pathname.startsWith("/apple-icon") ||
-    pathname.includes(".")
-  ) {
+  const isAdminRoute = pathname.startsWith("/admin");
+  const isStaffRoute = pathname.startsWith("/staff");
+  const isCustomerRoute = pathname.startsWith("/customer/dashboard");
+
+  if (!isAdminRoute && !isStaffRoute && !isCustomerRoute) {
     return NextResponse.next();
   }
 
-  if (isPublicApiRoute(pathname)) {
+  const session = await verifySession(
+    request.cookies.get(SESSION_COOKIE)?.value
+  );
+
+  const isAuthorized = isAdminRoute
+    ? session?.role === "admin"
+    : isStaffRoute
+      ? session?.role === "admin" || session?.role === "staff"
+      : Boolean(session?.role);
+
+  if (isAuthorized) {
     return NextResponse.next();
   }
 
-  if (isPublicRoute(pathname)) {
-    return NextResponse.next();
-  }
+  const loginUrl = request.nextUrl.clone();
+  loginUrl.pathname = "/login";
+  loginUrl.searchParams.set("next", pathname);
 
-  const galeriaRole = getGaleriaSessionRole(request);
+  const response = NextResponse.redirect(loginUrl);
+  response.cookies.delete(SESSION_COOKIE);
+  response.cookies.delete("galeria_session_role");
 
-  const googleToken = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-
-  const hasGoogleLogin = typeof googleToken?.email === "string";
-
-  if (pathname.startsWith("/customer")) {
-    if (
-      galeriaRole === "customer" ||
-      galeriaRole === "admin" ||
-      galeriaRole === "unknown" ||
-      hasGoogleLogin
-    ) {
-      return NextResponse.next();
-    }
-
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  if (pathname.startsWith("/admin")) {
-    if (galeriaRole === "admin" || galeriaRole === "unknown") {
-      return NextResponse.next();
-    }
-
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  if (pathname.startsWith("/staff")) {
-    if (
-      galeriaRole === "staff" ||
-      galeriaRole === "admin" ||
-      galeriaRole === "unknown"
-    ) {
-      return NextResponse.next();
-    }
-
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/admin/:path*", "/staff/:path*", "/customer/dashboard/:path*"],
 };
