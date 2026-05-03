@@ -14,6 +14,7 @@ const defaultAbout = {
   hero_subtitle:
     "Celebrating Filipino artistic excellence in the heart of Butuan City",
   heritage_title: "BUTUAN CITY ART HERITAGE",
+  hero_background_url: "",
   story_title: "Our Story",
   story_paragraph_1:
     "Founded in 2010, Galeria Butuan City emerged from a passionate vision to create a platform where Filipino contemporary art could thrive and be celebrated both locally and internationally.",
@@ -36,7 +37,13 @@ export async function GET() {
 
     await connection.end();
 
-    const about = Array.isArray(rows) && rows.length > 0 ? rows[0] : defaultAbout;
+    const about =
+      Array.isArray(rows) && rows.length > 0
+        ? {
+            ...defaultAbout,
+            ...rows[0],
+          }
+        : defaultAbout;
 
     return NextResponse.json({
       success: true,

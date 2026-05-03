@@ -10,6 +10,7 @@ type AboutForm = {
   hero_title: string;
   hero_subtitle: string;
   heritage_title: string;
+  hero_background_url: string;
   story_title: string;
   story_paragraph_1: string;
   story_paragraph_2: string;
@@ -24,6 +25,7 @@ const defaultForm: AboutForm = {
   hero_subtitle:
     "Celebrating Filipino artistic excellence in the heart of Butuan City",
   heritage_title: "BUTUAN CITY ART HERITAGE",
+  hero_background_url: "",
   story_title: "Our Story",
   story_paragraph_1:
     "Founded in 2010, Galeria Butuan City emerged from a passionate vision to create a platform where Filipino contemporary art could thrive and be celebrated both locally and internationally.",
@@ -40,7 +42,8 @@ export default function AdminAboutPage() {
   const [form, setForm] = useState<AboutForm>(defaultForm);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -100,8 +103,16 @@ export default function AdminAboutPage() {
     }
   }
 
-  async function uploadImage(file: File) {
-    setIsUploading(true);
+  async function uploadImage(
+    file: File,
+    field: "hero_background_url" | "image_url"
+  ) {
+    if (field === "hero_background_url") {
+      setIsUploadingHero(true);
+    } else {
+      setIsUploadingGallery(true);
+    }
+
     setMessage("");
     setError("");
 
@@ -139,14 +150,15 @@ export default function AdminAboutPage() {
 
       setForm((current) => ({
         ...current,
-        image_url: uploadedUrl,
+        [field]: uploadedUrl,
       }));
 
       setMessage("Image uploaded. Click Save Changes to publish it.");
     } catch {
       setError("Upload failed. You can paste an image URL instead.");
     } finally {
-      setIsUploading(false);
+      setIsUploadingHero(false);
+      setIsUploadingGallery(false);
     }
   }
 
@@ -175,8 +187,7 @@ export default function AdminAboutPage() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75">
-              Edit the About Galeria page content, story section, and gallery
-              image.
+              Edit the About hero banner, story section, and gallery image.
             </p>
           </div>
 
@@ -213,9 +224,9 @@ export default function AdminAboutPage() {
       <div className="grid gap-8 xl:grid-cols-[1fr_0.9fr]">
         <div className="space-y-6 rounded-[2rem] border border-border bg-card/90 p-6 shadow-xl backdrop-blur">
           <div>
-            <h2 className="text-xl font-black">Text Content</h2>
+            <h2 className="text-xl font-black">Hero Banner Content</h2>
             <p className="text-sm text-muted-foreground">
-              These fields will appear on the public About page.
+              This controls the top About section in your screenshot.
             </p>
           </div>
 
@@ -250,6 +261,42 @@ export default function AdminAboutPage() {
               }
               placeholder="BUTUAN CITY ART HERITAGE"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Hero Background Image URL</Label>
+            <Input
+              value={form.hero_background_url}
+              onChange={(event) =>
+                updateField("hero_background_url", event.target.value)
+              }
+              placeholder="https://..."
+            />
+          </div>
+
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center hover:bg-muted">
+            <ImagePlus className="mb-2 h-8 w-8 text-primary" />
+            <span className="text-sm font-semibold">
+              {isUploadingHero ? "Uploading hero image..." : "Upload Hero Image"}
+            </span>
+            <span className="mt-1 text-xs text-muted-foreground">
+              This image appears behind ABOUT GALERIA.
+            </span>
+
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={isUploadingHero}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) uploadImage(file, "hero_background_url");
+              }}
+            />
+          </label>
+
+          <div className="border-t border-border pt-6">
+            <h2 className="text-xl font-black">Story Content</h2>
           </div>
 
           <div className="space-y-2">
@@ -301,41 +348,71 @@ export default function AdminAboutPage() {
         </div>
 
         <div className="space-y-6">
+          <div className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-xl">
+            <div
+              className="relative flex min-h-[280px] items-center justify-center bg-[#222] bg-cover bg-center p-8 text-center text-white"
+              style={
+                form.hero_background_url
+                  ? {
+                      backgroundImage: `linear-gradient(rgba(0,0,0,0.58), rgba(0,0,0,0.58)), url(${form.hero_background_url})`,
+                    }
+                  : undefined
+              }
+            >
+              <h3 className="absolute left-1/2 top-4 -translate-x-1/2 whitespace-nowrap font-serif text-6xl font-black uppercase text-white/15">
+                {form.hero_title}
+              </h3>
+
+              <div className="relative z-10">
+                <p className="font-serif text-4xl uppercase tracking-[0.25em]">
+                  {form.hero_title.replace("GALERIA", "").trim() || "ABOUT"}
+                </p>
+                <p className="mt-5 font-semibold">{form.hero_subtitle}</p>
+                <p className="mt-4 text-xl font-black uppercase tracking-[0.18em] text-white/40">
+                  {form.heritage_title}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 text-sm text-muted-foreground">
+              Live preview of the top About hero banner.
+            </div>
+          </div>
+
           <div className="rounded-[2rem] border border-border bg-card/90 p-6 shadow-xl backdrop-blur">
             <div className="mb-5">
-              <h2 className="text-xl font-black">Gallery Image</h2>
+              <h2 className="text-xl font-black">Gallery Interior Image</h2>
               <p className="text-sm text-muted-foreground">
-                Upload an image or paste an image URL.
+                This controls the lower right image section.
               </p>
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Upload Image</Label>
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center hover:bg-muted">
-                  <ImagePlus className="mb-2 h-8 w-8 text-primary" />
-                  <span className="text-sm font-semibold">
-                    {isUploading ? "Uploading..." : "Choose image"}
-                  </span>
-                  <span className="mt-1 text-xs text-muted-foreground">
-                    JPG, PNG, or WEBP
-                  </span>
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center hover:bg-muted">
+                <ImagePlus className="mb-2 h-8 w-8 text-primary" />
+                <span className="text-sm font-semibold">
+                  {isUploadingGallery
+                    ? "Uploading gallery image..."
+                    : "Upload Gallery Image"}
+                </span>
+                <span className="mt-1 text-xs text-muted-foreground">
+                  JPG, PNG, or WEBP
+                </span>
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={isUploading}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) uploadImage(file);
-                    }}
-                  />
-                </label>
-              </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={isUploadingGallery}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) uploadImage(file, "image_url");
+                  }}
+                />
+              </label>
 
               <div className="space-y-2">
-                <Label>Image URL</Label>
+                <Label>Gallery Image URL</Label>
                 <Input
                   value={form.image_url}
                   onChange={(event) =>
@@ -401,7 +478,7 @@ export default function AdminAboutPage() {
             </div>
 
             <div className="p-4 text-sm text-muted-foreground">
-              Live preview of the About page image section.
+              Live preview of the gallery image section.
             </div>
           </div>
         </div>

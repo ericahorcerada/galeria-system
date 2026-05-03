@@ -13,6 +13,29 @@ async function getConnection() {
   return mysql.createConnection(dbConfig);
 }
 
+async function addColumnIfMissing(
+  connection: mysql.Connection,
+  columnName: string,
+  columnDefinition: string
+) {
+  const [rows] = await connection.execute(
+    `
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = ?
+      AND TABLE_NAME = 'about_page_settings'
+      AND COLUMN_NAME = ?
+    `,
+    [process.env.MYSQL_DATABASE, columnName]
+  );
+
+  if (Array.isArray(rows) && rows.length === 0) {
+    await connection.execute(
+      `ALTER TABLE about_page_settings ADD COLUMN ${columnName} ${columnDefinition}`
+    );
+  }
+}
+
 async function ensureAboutTable() {
   const connection = await getConnection();
 
@@ -22,6 +45,7 @@ async function ensureAboutTable() {
       hero_title VARCHAR(255) NOT NULL DEFAULT 'ABOUT GALERIA',
       hero_subtitle VARCHAR(255) NOT NULL DEFAULT 'Celebrating Filipino artistic excellence in the heart of Butuan City',
       heritage_title VARCHAR(255) NOT NULL DEFAULT 'BUTUAN CITY ART HERITAGE',
+      hero_background_url TEXT,
       story_title VARCHAR(255) NOT NULL DEFAULT 'Our Story',
       story_paragraph_1 TEXT,
       story_paragraph_2 TEXT,
@@ -33,12 +57,15 @@ async function ensureAboutTable() {
     )
   `);
 
+  await addColumnIfMissing(connection, "hero_background_url", "TEXT");
+
   await connection.execute(`
     INSERT IGNORE INTO about_page_settings (
       id,
       hero_title,
       hero_subtitle,
       heritage_title,
+      hero_background_url,
       story_title,
       story_paragraph_1,
       story_paragraph_2,
@@ -51,6 +78,7 @@ async function ensureAboutTable() {
       'ABOUT GALERIA',
       'Celebrating Filipino artistic excellence in the heart of Butuan City',
       'BUTUAN CITY ART HERITAGE',
+      '',
       'Our Story',
       'Founded in 2010, Galeria Butuan City emerged from a passionate vision to create a platform where Filipino contemporary art could thrive and be celebrated both locally and internationally.',
       'What began as a small gallery space has grown into a vibrant cultural hub, representing over 50 artists and hosting numerous exhibitions that have shaped the Philippine art landscape.',
@@ -105,6 +133,7 @@ export async function PATCH(request: Request) {
       hero_title,
       hero_subtitle,
       heritage_title,
+      hero_background_url,
       story_title,
       story_paragraph_1,
       story_paragraph_2,
@@ -123,6 +152,7 @@ export async function PATCH(request: Request) {
         hero_title = ?,
         hero_subtitle = ?,
         heritage_title = ?,
+        hero_background_url = ?,
         story_title = ?,
         story_paragraph_1 = ?,
         story_paragraph_2 = ?,
@@ -137,6 +167,7 @@ export async function PATCH(request: Request) {
         hero_subtitle ||
           "Celebrating Filipino artistic excellence in the heart of Butuan City",
         heritage_title || "BUTUAN CITY ART HERITAGE",
+        hero_background_url || "",
         story_title || "Our Story",
         story_paragraph_1 || "",
         story_paragraph_2 || "",

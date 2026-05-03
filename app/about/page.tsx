@@ -8,6 +8,7 @@ type AboutData = {
   hero_title: string;
   hero_subtitle: string;
   heritage_title: string;
+  hero_background_url: string;
   story_title: string;
   story_paragraph_1: string;
   story_paragraph_2: string;
@@ -22,6 +23,7 @@ const defaultAbout: AboutData = {
   hero_subtitle:
     "Celebrating Filipino artistic excellence in the heart of Butuan City",
   heritage_title: "BUTUAN CITY ART HERITAGE",
+  hero_background_url: "",
   story_title: "Our Story",
   story_paragraph_1:
     "Founded in 2010, Galeria Butuan City emerged from a passionate vision to create a platform where Filipino contemporary art could thrive and be celebrated both locally and internationally.",
@@ -65,15 +67,24 @@ export default function AboutPage() {
       <Header />
 
       <main>
-        <section className="relative overflow-hidden bg-[#222] px-6 pb-24 pt-36 text-center text-white">
+        <section
+          className="relative flex min-h-[430px] items-center justify-center overflow-hidden bg-[#222] bg-cover bg-center px-6 pb-24 pt-40 text-center text-white"
+          style={
+            about.hero_background_url
+              ? {
+                  backgroundImage: `linear-gradient(rgba(0,0,0,0.58), rgba(0,0,0,0.58)), url(${about.hero_background_url})`,
+                }
+              : undefined
+          }
+        >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_80%,rgba(255,255,255,0.08),transparent_25%)]" />
 
-          <h1 className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 whitespace-nowrap font-serif text-7xl font-black uppercase tracking-wide text-white/20 sm:text-8xl md:text-9xl">
+          <h1 className="pointer-events-none absolute left-1/2 top-8 -translate-x-1/2 whitespace-nowrap font-serif text-6xl font-black uppercase tracking-wide text-white/15 sm:text-7xl md:text-8xl lg:text-9xl">
             {about.hero_title}
           </h1>
 
           <div className="relative z-10 mx-auto max-w-5xl">
-            <h2 className="font-serif text-5xl uppercase tracking-[0.18em] sm:text-6xl">
+            <h2 className="font-serif text-5xl uppercase tracking-[0.22em] sm:text-6xl">
               {about.hero_title.replace("GALERIA", "").trim() || "ABOUT"}
             </h2>
 
@@ -81,7 +92,7 @@ export default function AboutPage() {
               {about.hero_subtitle}
             </p>
 
-            <p className="mt-4 text-3xl font-bold uppercase tracking-[0.18em] text-white/30">
+            <p className="mt-4 text-2xl font-bold uppercase tracking-[0.2em] text-white/45 sm:text-3xl">
               {about.heritage_title}
             </p>
           </div>
