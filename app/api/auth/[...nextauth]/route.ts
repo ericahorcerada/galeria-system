@@ -1,61 +1,129 @@
-import NextAuth, { type NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export const authOptions: NextAuthOptions = {
-  secret: process.env.NEXTAUTH_SECRET,
+const publicRoutes = [
+  "/",
+  "/about",
+  "/artists",
+  "/artwork",
+  "/cart",
+  "/collections",
+  "/feedback",
+  "/inventory",
+  "/login",
+  "/profile",
+  "/sale",
+  "/shop",
+];
 
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-      authorization: {
-        params: {
-          prompt: "select_account",
-          access_type: "offline",
-          response_type: "code",
-        },
-      },
-    }),
-  ],
+const publicApiRoutes = [
+  "/api/about",
+  "/api/artists",
+  "/api/artists-page",
+  "/api/artworks",
+  "/api/auth",
+  "/api/collections",
+  "/api/feedback",
+  "/api/homepage",
+];
 
-  pages: {
-    signIn: "/login",
-  },
+function isPublicRoute(pathname: string) {
+  return publicRoutes.some((route) => {
+    if (route === "/") {
+      return pathname === "/";
+    }
 
-  callbacks: {
-    async jwt({ token, account, profile }) {
-      if (account && profile) {
-        token.role = "customer";
-        token.email = token.email || profile.email;
-        token.name = token.name || profile.name;
-      }
+    return pathname === route || pathname.startsWith(`${route}/`);
+  });
+}
 
-      return token;
-    },
+function isPublicApiRoute(pathname: string) {
+  return publicApiRoutes.some((route) => {
+    return pathname === route || pathname.startsWith(`${route}/`);
+  });
+}
 
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.email = token.email || session.user.email;
-        session.user.name = token.name || session.user.name;
-      }
+function hasCustomSession(request: NextRequest) {
+  const possibleCookieNames = [
+    "galeria_session",
+    "session",
+    "auth_session",
+    "user_session",
+  ];
 
-      return session;
-    },
+  return possibleCookieNames.some((cookieName) => {
+    return Boolean(request.cookies.get(cookieName)?.value);
+  });
+}
 
-    async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) {
-        return `${baseUrl}${url}`;
-      }
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-      if (url.startsWith(baseUrl)) {
-        return url;
-      }
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/icon") ||
+    pathname.startsWith("/apple-icon") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
+  }
 
-      return `${baseUrl}/customer/dashboard`;
-    },
-  },
+  if (isPublicApiRoute(pathname)) {
+    return NextResponse.next();
+  }
+
+  if (isPublicRoute(pathname)) {
+    return NextResponse.next();
+  }
+
+  const customSessionExists = hasCustomSession(request);
+
+  const googleToken = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  const isGoogleCustomer =
+    typeof googleToken?.email === "string" &&
+    (googleToken.role === "customer" || googleToken.provider === "google");
+
+  if (pathname.startsWith("/customer")) {
+    if (customSessionExists || isGoogleCustomer) {
+      return NextResponse.next();
+    }
+
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (pathname.startsWith("/admin")) {
+    if (customSessionExists) {
+      return NextResponse.next();
+    }
+
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (pathname.startsWith("/staff")) {
+    if (customSessionExists) {
+      return NextResponse.next();
+    }
+
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
-
-const handler = NextAuth(authOptions);
-
-export { handler as GET, handler as POST };
