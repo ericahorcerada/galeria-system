@@ -13,29 +13,6 @@ async function getConnection() {
   return mysql.createConnection(dbConfig);
 }
 
-async function addColumnIfMissing(
-  connection: mysql.Connection,
-  columnName: string,
-  columnDefinition: string
-) {
-  const [rows] = await connection.execute(
-    `
-    SELECT COLUMN_NAME
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = ?
-      AND TABLE_NAME = 'about_page_settings'
-      AND COLUMN_NAME = ?
-    `,
-    [process.env.MYSQL_DATABASE, columnName]
-  );
-
-  if (Array.isArray(rows) && rows.length === 0) {
-    await connection.execute(
-      `ALTER TABLE about_page_settings ADD COLUMN ${columnName} ${columnDefinition}`
-    );
-  }
-}
-
 async function ensureAboutTable() {
   const connection = await getConnection();
 
@@ -57,7 +34,18 @@ async function ensureAboutTable() {
     )
   `);
 
-  await addColumnIfMissing(connection, "hero_background_url", "TEXT");
+  try {
+    await connection.execute(`
+      ALTER TABLE about_page_settings
+      ADD COLUMN hero_background_url TEXT
+    `);
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+
+    if (code !== "ER_DUP_FIELDNAME") {
+      console.error("hero_background_url column check:", error);
+    }
+  }
 
   await connection.execute(`
     INSERT IGNORE INTO about_page_settings (
@@ -92,6 +80,14 @@ async function ensureAboutTable() {
   await connection.end();
 }
 
+function cleanText(value: unknown, fallback = "") {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  return value.trim();
+}
+
 export async function GET() {
   try {
     await ensureAboutTable();
@@ -104,7 +100,7 @@ export async function GET() {
 
     await connection.end();
 
-    const about = Array.isArray(rows) ? rows[0] : null;
+    const about = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
 
     return NextResponse.json({
       success: true,
@@ -129,19 +125,26 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
 
-    const {
-      hero_title,
-      hero_subtitle,
-      heritage_title,
-      hero_background_url,
-      story_title,
-      story_paragraph_1,
-      story_paragraph_2,
-      story_paragraph_3,
-      image_url,
-      image_title,
-      image_subtitle,
-    } = body;
+    const heroTitle = cleanText(body.hero_title, "ABOUT GALERIA");
+    const heroSubtitle = cleanText(
+      body.hero_subtitle,
+      "Celebrating Filipino artistic excellence in the heart of Butuan City"
+    );
+    const heritageTitle = cleanText(
+      body.heritage_title,
+      "BUTUAN CITY ART HERITAGE"
+    );
+    const heroBackgroundUrl = cleanText(body.hero_background_url, "");
+    const storyTitle = cleanText(body.story_title, "Our Story");
+    const storyParagraph1 = cleanText(body.story_paragraph_1, "");
+    const storyParagraph2 = cleanText(body.story_paragraph_2, "");
+    const storyParagraph3 = cleanText(body.story_paragraph_3, "");
+    const imageUrl = cleanText(body.image_url, "");
+    const imageTitle = cleanText(body.image_title, "GALLERY INTERIOR");
+    const imageSubtitle = cleanText(
+      body.image_subtitle,
+      "VISIT US IN BUTUAN CITY"
+    );
 
     const connection = await getConnection();
 
@@ -163,18 +166,17 @@ export async function PATCH(request: Request) {
       WHERE id = 1
       `,
       [
-        hero_title || "ABOUT GALERIA",
-        hero_subtitle ||
-          "Celebrating Filipino artistic excellence in the heart of Butuan City",
-        heritage_title || "BUTUAN CITY ART HERITAGE",
-        hero_background_url || "",
-        story_title || "Our Story",
-        story_paragraph_1 || "",
-        story_paragraph_2 || "",
-        story_paragraph_3 || "",
-        image_url || "",
-        image_title || "GALLERY INTERIOR",
-        image_subtitle || "VISIT US IN BUTUAN CITY",
+        heroTitle,
+        heroSubtitle,
+        heritageTitle,
+        heroBackgroundUrl,
+        storyTitle,
+        storyParagraph1,
+        storyParagraph2,
+        storyParagraph3,
+        imageUrl,
+        imageTitle,
+        imageSubtitle,
       ]
     );
 
