@@ -134,7 +134,6 @@ export default function LoginPage() {
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const selectRole = (role: LoginRole) => {
     setSelectedRole(role);
@@ -158,15 +157,6 @@ export default function LoginPage() {
       email: "",
       password: "",
     }));
-  };
-
-  const handleGoogleContinue = () => {
-    setFormError("");
-    setFormSuccess("");
-    setIsGoogleLoading(true);
-
-    window.location.href =
-      "/api/auth/signin/google?callbackUrl=%2Fcustomer%2Fdashboard";
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -357,19 +347,15 @@ export default function LoginPage() {
 
             {!isSignUp && selectedRole === "customer" && (
               <div className="mb-5">
-                <button
-                  type="button"
-                  onClick={handleGoogleContinue}
-                  disabled={isGoogleLoading}
-                  className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
+                <a
+                  href="/api/auth/signin/google?callbackUrl=%2Fcustomer%2Fdashboard"
+                  className="relative z-50 flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-border bg-background text-sm font-semibold text-foreground shadow-sm transition hover:bg-muted"
                 >
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#4285f4] shadow-sm">
                     G
                   </span>
-                  {isGoogleLoading
-                    ? "Opening Google..."
-                    : "Continue with Google"}
-                </button>
+                  Continue with Google
+                </a>
 
                 <div className="my-5 flex items-center gap-3">
                   <div className="h-px flex-1 bg-border" />
