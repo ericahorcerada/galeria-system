@@ -1,3 +1,5 @@
+/* stylelint-disable at-rule-no-unknown */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -211,7 +213,7 @@ svg {
 
 input[type="file"]::file-selector-button {
   color: var(--foreground);
-  background: var(--muted);
+  background-color: var(--muted);
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   padding: 0.35rem 0.65rem;
@@ -224,30 +226,30 @@ input[type="file"]::file-selector-button {
 }
 
 .art-gradient-text {
-  background: linear-gradient(90deg, #f97316, #ec4899, #8b5cf6, #2563eb);
+  color: transparent;
+  background-image: linear-gradient(90deg, #f97316, #ec4899, #8b5cf6, #2563eb);
   background-clip: text;
   -webkit-background-clip: text;
-  color: transparent;
 }
 
 .art-card {
   border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.60);
-  background: rgba(255, 255, 255, 0.80);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background-color: rgba(255, 255, 255, 0.8);
   box-shadow: 0 24px 48px rgba(251, 146, 60, 0.14);
   backdrop-filter: blur(12px);
 }
 
 .dark .art-card {
   border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(32, 18, 45, 0.78);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.20);
+  background-color: rgba(32, 18, 45, 0.78);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
 }
 
 .art-button {
   border-radius: 0.75rem;
   color: white;
-  background: linear-gradient(90deg, #f97316, #ec4899, #7c3aed);
+  background-image: linear-gradient(90deg, #f97316, #ec4899, #7c3aed);
   box-shadow: 0 14px 28px rgba(236, 72, 153, 0.25);
 }
 
