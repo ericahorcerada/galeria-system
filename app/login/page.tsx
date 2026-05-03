@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { signIn } from "next-auth/react";
 import {
   ArrowRight,
   Briefcase,
@@ -269,12 +270,14 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleContinue = () => {
-    setFormError("");
-    setFormSuccess(
-      "Google sign-in button is restored. Google OAuth is not connected yet, so use customer email/password for now."
-    );
-  };
+  const handleGoogleContinue = async () => {
+  setFormError("");
+  setFormSuccess("");
+
+  await signIn("google", {
+    callbackUrl: "/customer/dashboard",
+  });
+};
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
