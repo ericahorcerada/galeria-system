@@ -1,183 +1,321 @@
-import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import type { ResultSetHeader, RowDataPacket } from "mysql2";
+import { NextResponse, type NextRequest } from "next/server";
 import { getPool } from "@/lib/db";
-import { getCurrentSession } from "@/lib/session";
-import { authOptions } from "@/lib/auth-options";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const SHIPPING_FEE = 50;
-const TAX_RATE = 0.12;
-const PAYMENT_METHODS = new Set(["cod", "gcash", "maya", "bank_transfer"]);
-
-function getPaymentLabel(method: string) {
-  const labels: Record<string, string> = {
-    cod: "COD / Pay on Pickup",
-    gcash: "GCash",
-    maya: "Maya",
-    bank_transfer: "Bank Transfer",
-  };
-
-  return labels[method] || "COD / Pay on Pickup";
-}
-
-function getPaymentMessage(method: string) {
-  if (method === "cod") {
-    return "Order placed successfully. Please prepare payment upon delivery or pickup.";
-  }
-
-  if (method === "gcash") {
-    return "Order placed successfully. Please send your GCash payment and wait for staff verification.";
-  }
-
-  if (method === "maya") {
-    return "Order placed successfully. Please send your Maya payment and wait for staff verification.";
-  }
-
-  if (method === "bank_transfer") {
-    return "Order placed successfully. Please complete your bank transfer and wait for staff verification.";
-  }
-
-  return "Order placed successfully.";
-}
-
 type CheckoutItem = {
-  id: string | number;
-  quantity: number;
+  artwork_id?: number;
+  artworkId?: number;
+  product_id?: number;
+  productId?: number;
+  id?: number;
+  title?: string;
+  name?: string;
+  artwork_title?: string;
+  price?: number;
+  unit_price?: number;
+  unitPrice?: number;
+  quantity?: number;
+  qty?: number;
+  subtotal?: number;
+  line_total?: number;
+  lineTotal?: number;
 };
 
-type CustomerRow = RowDataPacket & {
-  customer_id: number;
-  full_name: string;
-  email: string;
+type ColumnRow = RowDataPacket & {
+  COLUMN_NAME: string;
 };
 
-type ArtworkRow = RowDataPacket & {
-  artwork_id: number;
-  title: string;
-  artist_name: string;
-  price: number | string;
-  stock_quantity: number;
-};
-
-function asText(value: unknown) {
+function cleanString(value: unknown) {
   return String(value || "").trim();
 }
 
-function makeOrderNumber() {
-  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const random = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `GM-${stamp}-${random}`;
+function cleanNumber(value: unknown) {
+  const numberValue = Number(value || 0);
+  return Number.isFinite(numberValue) ? numberValue : 0;
 }
 
-async function getCheckoutCustomer() {
-  const localSession = await getCurrentSession();
+function getFirstString(...values: unknown[]) {
+  for (const value of values) {
+    const cleaned = cleanString(value);
 
-  if (localSession?.role === "customer") {
-    return {
-      customerId: Number(localSession.id),
-      name: localSession.name,
-      email: String(localSession.identifier || "").toLowerCase(),
-      provider: "local" as const,
-    };
+    if (cleaned) {
+      return cleaned;
+    }
   }
 
-  const googleSession = await getServerSession(authOptions);
-  const googleEmail = googleSession?.user?.email?.toLowerCase();
+  return "";
+}
 
-  if (!googleEmail) {
-    return null;
+function getPaymentMethod(rawValue: unknown) {
+  const rawPaymentMethod = cleanString(rawValue).toLowerCase();
+
+  const paymentMethodMap: Record<string, string> = {
+    "cash on delivery": "cash_on_delivery",
+    cash_on_delivery: "cash_on_delivery",
+    cod: "cash_on_delivery",
+
+    gcash: "gcash",
+    "g-cash": "gcash",
+    "g cash": "gcash",
+
+    "bank transfer": "bank_transfer",
+    bank_transfer: "bank_transfer",
+    bank: "bank_transfer",
+
+    "pay at gallery": "pay_at_gallery",
+    pay_at_gallery: "pay_at_gallery",
+    gallery: "pay_at_gallery",
+  };
+
+  return paymentMethodMap[rawPaymentMethod] || "";
+}
+
+function getPaymentLabel(paymentMethod: string) {
+  const labels: Record<string, string> = {
+    cash_on_delivery: "Cash on Delivery",
+    gcash: "GCash",
+    bank_transfer: "Bank Transfer",
+    pay_at_gallery: "Pay at Gallery",
+  };
+
+  return labels[paymentMethod] || paymentMethod;
+}
+
+function normalizeItems(rawItems: unknown) {
+  if (!Array.isArray(rawItems)) {
+    return [];
   }
 
-  const fullName = googleSession?.user?.name || "Google Customer";
+  return rawItems
+    .map((item) => {
+      const cartItem = item as CheckoutItem;
+
+      const artworkId = cleanNumber(
+        cartItem.artwork_id ||
+          cartItem.artworkId ||
+          cartItem.product_id ||
+          cartItem.productId ||
+          cartItem.id
+      );
+
+      const title = getFirstString(
+        cartItem.title,
+        cartItem.name,
+        cartItem.artwork_title,
+        `Artwork #${artworkId}`
+      );
+
+      const price = cleanNumber(
+        cartItem.price || cartItem.unit_price || cartItem.unitPrice
+      );
+
+      const quantity = Math.max(
+        1,
+        cleanNumber(cartItem.quantity || cartItem.qty || 1)
+      );
+
+      const subtotal = cleanNumber(
+        cartItem.subtotal || cartItem.line_total || cartItem.lineTotal
+      );
+
+      return {
+        artwork_id: artworkId,
+        title,
+        price,
+        quantity,
+        subtotal: subtotal > 0 ? subtotal : price * quantity,
+      };
+    })
+    .filter((item) => item.artwork_id > 0 && item.quantity > 0);
+}
+
+async function tableHasColumn(tableName: string, columnName: string) {
   const pool = getPool();
 
-  const [existingRows] = await pool.query<CustomerRow[]>(
+  const [rows] = await pool.query<ColumnRow[]>(
     `
-    SELECT customer_id, full_name, email
-    FROM customers
-    WHERE LOWER(email) = ?
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = ?
+      AND COLUMN_NAME = ?
     LIMIT 1
     `,
-    [googleEmail]
+    [tableName, columnName]
   );
 
-  if (existingRows[0]) {
-    return {
-      customerId: existingRows[0].customer_id,
-      name: existingRows[0].full_name || fullName,
-      email: googleEmail,
-      provider: "google" as const,
-    };
-  }
-
-  const [insertResult] = await pool.query<ResultSetHeader>(
-    `
-    INSERT INTO customers (
-      full_name,
-      phone,
-      email,
-      password_hash,
-      loyalty_points,
-      status
-    )
-    VALUES (?, '', ?, 'GOOGLE_ACCOUNT', 0, 'active')
-    `,
-    [fullName, googleEmail]
-  );
-
-  return {
-    customerId: insertResult.insertId,
-    name: fullName,
-    email: googleEmail,
-    provider: "google" as const,
-  };
+  return rows.length > 0;
 }
 
-export async function POST(request: Request) {
-  const checkoutCustomer = await getCheckoutCustomer();
+async function addColumnIfMissing(
+  tableName: string,
+  columnName: string,
+  columnDefinition: string
+) {
+  const exists = await tableHasColumn(tableName, columnName);
 
-  if (!checkoutCustomer) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Please sign in with a customer account before checkout.",
-      },
-      { status: 401 }
+  if (!exists) {
+    await getPool().query(
+      `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`
     );
   }
+}
 
+async function ensureCheckoutTables() {
   const pool = getPool();
-  const connection = await pool.getConnection();
 
-  try {
-    const body = await request.json();
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      order_id INT AUTO_INCREMENT PRIMARY KEY,
+      order_number VARCHAR(100) NOT NULL,
+      customer_name VARCHAR(255) NOT NULL,
+      customer_email VARCHAR(255) NOT NULL,
+      customer_phone VARCHAR(100) NOT NULL,
+      delivery_address TEXT NOT NULL,
+      city VARCHAR(255) NULL,
+      payment_method VARCHAR(100) NOT NULL,
+      payment_status VARCHAR(100) DEFAULT 'unpaid',
+      status VARCHAR(100) DEFAULT 'pending',
+      notes TEXT NULL,
+      total_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_orders_customer_email (customer_email),
+      INDEX idx_orders_order_number (order_number)
+    )
+  `);
 
-    const rawItems = Array.isArray(body.items) ? (body.items as CheckoutItem[]) : [];
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS order_items (
+      order_item_id INT AUTO_INCREMENT PRIMARY KEY,
+      order_id INT NOT NULL,
+      artwork_id INT NOT NULL,
+      title VARCHAR(255) NULL,
+      price DECIMAL(12, 2) NOT NULL DEFAULT 0,
+      quantity INT NOT NULL DEFAULT 1,
+      subtotal DECIMAL(12, 2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_order_items_order_id (order_id),
+      INDEX idx_order_items_artwork_id (artwork_id)
+    )
+  `);
 
-    const firstName = asText(body.customer?.firstName);
-    const lastName = asText(body.customer?.lastName);
-    const email = asText(body.customer?.email || checkoutCustomer.email).toLowerCase();
-    const phone = asText(body.customer?.phone);
-    const address = asText(body.shipping?.address);
-    const city = asText(body.shipping?.city);
-    const postalCode = asText(body.shipping?.postalCode);
-    const country = asText(body.shipping?.country) || "Philippines";
-    const paymentMethod = asText(body.paymentMethod) || "cod";
+  await addColumnIfMissing("orders", "order_number", "VARCHAR(100) NULL");
+  await addColumnIfMissing("orders", "customer_name", "VARCHAR(255) NULL");
+  await addColumnIfMissing("orders", "customer_email", "VARCHAR(255) NULL");
+  await addColumnIfMissing("orders", "customer_phone", "VARCHAR(100) NULL");
+  await addColumnIfMissing("orders", "delivery_address", "TEXT NULL");
+  await addColumnIfMissing("orders", "city", "VARCHAR(255) NULL");
+  await addColumnIfMissing("orders", "payment_method", "VARCHAR(100) NULL");
+  await addColumnIfMissing("orders", "payment_status", "VARCHAR(100) DEFAULT 'unpaid'");
+  await addColumnIfMissing("orders", "status", "VARCHAR(100) DEFAULT 'pending'");
+  await addColumnIfMissing("orders", "notes", "TEXT NULL");
+  await addColumnIfMissing("orders", "total_amount", "DECIMAL(12, 2) DEFAULT 0");
+  await addColumnIfMissing(
+    "orders",
+    "created_at",
+    "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+  );
+  await addColumnIfMissing(
+    "orders",
+    "updated_at",
+    "TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+  );
 
-if (!PAYMENT_METHODS.has(paymentMethod)) {
-  return NextResponse.json(
-    {
-      success: false,
-      error: "Invalid payment method.",
-    },
-    { status: 400 }
+  await addColumnIfMissing("order_items", "order_id", "INT NULL");
+  await addColumnIfMissing("order_items", "artwork_id", "INT NULL");
+  await addColumnIfMissing("order_items", "title", "VARCHAR(255) NULL");
+  await addColumnIfMissing("order_items", "price", "DECIMAL(12, 2) DEFAULT 0");
+  await addColumnIfMissing("order_items", "quantity", "INT DEFAULT 1");
+  await addColumnIfMissing("order_items", "subtotal", "DECIMAL(12, 2) DEFAULT 0");
+  await addColumnIfMissing(
+    "order_items",
+    "created_at",
+    "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
   );
 }
 
-    if (!firstName || !lastName || !email || !phone || !address || !city || !postalCode) {
+export async function POST(request: NextRequest) {
+  try {
+    await ensureCheckoutTables();
+
+    const body = await request.json();
+
+    const customerName = getFirstString(
+      body.customer_name,
+      body.customerName,
+      body.full_name,
+      body.fullName,
+      body.name,
+      body.customer?.name,
+      body.customer?.fullName,
+      body.customer?.full_name,
+      body.contact?.name
+    );
+
+    const customerEmail = getFirstString(
+      body.customer_email,
+      body.customerEmail,
+      body.email,
+      body.customer?.email,
+      body.contact?.email
+    );
+
+    const customerPhone = getFirstString(
+      body.customer_phone,
+      body.customerPhone,
+      body.phone,
+      body.phone_number,
+      body.phoneNumber,
+      body.contact_number,
+      body.contactNumber,
+      body.customer?.phone,
+      body.customer?.phoneNumber,
+      body.customer?.phone_number,
+      body.contact?.phone
+    );
+
+    const deliveryAddress = getFirstString(
+      body.delivery_address,
+      body.deliveryAddress,
+      body.shipping_address,
+      body.shippingAddress,
+      body.address,
+      body.shipping?.address,
+      body.shipping?.deliveryAddress,
+      body.shipping?.delivery_address,
+      body.shipping?.shippingAddress,
+      body.shipping?.shipping_address
+    );
+
+    const city = getFirstString(
+      body.city,
+      body.shipping_city,
+      body.shippingCity,
+      body.shipping?.city
+    );
+
+    const notes = getFirstString(body.notes, body.order_notes, body.orderNotes);
+
+    const paymentMethod = getPaymentMethod(
+      body.payment_method ||
+        body.paymentMethod ||
+        body.payment_label ||
+        body.paymentLabel
+    );
+
+    const items = normalizeItems(
+      body.items || body.order_items || body.orderItems
+    );
+
+    const totalAmount =
+      cleanNumber(body.total_amount || body.totalAmount || body.total) ||
+      items.reduce((sum, item) => sum + item.subtotal, 0);
+
+    if (!customerName || !customerEmail || !customerPhone || !deliveryAddress) {
       return NextResponse.json(
         {
           success: false,
@@ -187,194 +325,121 @@ if (!PAYMENT_METHODS.has(paymentMethod)) {
       );
     }
 
-    const cartItems = rawItems.map((item) => ({
-      id: Number(item.id),
-      quantity: Math.max(1, Math.min(99, Math.floor(Number(item.quantity) || 1))),
-    }));
-
-    if (cartItems.some((item) => !Number.isInteger(item.id) || item.id <= 0)) {
+    if (!paymentMethod) {
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid cart item.",
+          error: "Invalid payment method.",
         },
         { status: 400 }
       );
     }
 
-    await connection.beginTransaction();
-
-    const customerId = checkoutCustomer.customerId;
-    const fullName = `${firstName} ${lastName}`.trim();
-
-    await connection.query(
-      `
-      UPDATE customers
-      SET
-        full_name = ?,
-        phone = ?,
-        email = ?,
-        status = 'active'
-      WHERE customer_id = ?
-      `,
-      [fullName, phone, email, customerId]
-    );
-
-    let subtotal = 0;
-
-    const orderItems: Array<{
-      artwork: ArtworkRow;
-      quantity: number;
-      lineTotal: number;
-    }> = [];
-
-    for (const item of cartItems) {
-      const [artworkRows] = await connection.query<ArtworkRow[]>(
-        `
-        SELECT
-          artwork_id,
-          title,
-          artist_name,
-          price,
-          stock_quantity
-        FROM store_artworks
-        WHERE artwork_id = ?
-        LIMIT 1
-        `,
-        [item.id]
+    if (items.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Your cart is empty.",
+        },
+        { status: 400 }
       );
-
-      const artwork = artworkRows[0];
-
-      if (!artwork) {
-        throw new Error(`Artwork #${item.id} was not found.`);
-      }
-
-      if (Number(artwork.stock_quantity) < item.quantity) {
-        throw new Error(`${artwork.title} only has ${artwork.stock_quantity} item(s) left.`);
-      }
-
-      const lineTotal = Number(artwork.price) * item.quantity;
-      subtotal += lineTotal;
-
-      orderItems.push({
-        artwork,
-        quantity: item.quantity,
-        lineTotal,
-      });
     }
 
-    const shippingFee = orderItems.length > 0 ? SHIPPING_FEE : 0;
-    const taxAmount = Math.round(subtotal * TAX_RATE);
-    const totalAmount = subtotal + shippingFee + taxAmount;
-    const orderNumber = makeOrderNumber();
+    const orderNumber =
+      getFirstString(body.order_number, body.orderNumber) ||
+      `GM-${Date.now()}`;
 
-    const [orderResult] = await connection.query<ResultSetHeader>(
+    const orderStatus = getFirstString(
+      body.status,
+      body.order_status,
+      body.orderStatus,
+      "pending"
+    );
+
+    const paymentStatus = getFirstString(
+      body.payment_status,
+      body.paymentStatus,
+      "unpaid"
+    );
+
+    const [orderResult] = await getPool().query<ResultSetHeader>(
       `
-      INSERT INTO store_orders (
+      INSERT INTO orders (
         order_number,
-        customer_id,
         customer_name,
-        email,
-        phone,
-        shipping_address,
-        shipping_city,
-        shipping_postal_code,
-        shipping_country,
-        subtotal,
-        shipping_fee,
-        tax_amount,
-        total_amount,
+        customer_email,
+        customer_phone,
+        delivery_address,
+        city,
         payment_method,
         payment_status,
-        order_status
+        status,
+        notes,
+        total_amount
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         orderNumber,
-        customerId,
-        fullName,
-        email,
-        phone,
-        address,
-        city,
-        postalCode,
-        country,
-        subtotal,
-        shippingFee,
-        taxAmount,
-        totalAmount,
+        customerName,
+        customerEmail,
+        customerPhone,
+        deliveryAddress,
+        city || "Butuan City",
         paymentMethod,
+        paymentStatus,
+        orderStatus,
+        notes,
+        totalAmount,
       ]
     );
 
     const orderId = orderResult.insertId;
 
-    for (const item of orderItems) {
-      await connection.query(
+    for (const item of items) {
+      await getPool().query(
         `
-        INSERT INTO store_order_items (
+        INSERT INTO order_items (
           order_id,
           artwork_id,
           title,
-          artist_name,
+          price,
           quantity,
-          unit_price,
-          line_total
+          subtotal
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         `,
         [
           orderId,
-          item.artwork.artwork_id,
-          item.artwork.title,
-          item.artwork.artist_name,
+          item.artwork_id,
+          item.title,
+          item.price,
           item.quantity,
-          Number(item.artwork.price),
-          item.lineTotal,
+          item.subtotal,
         ]
-      );
-
-      await connection.query(
-        `
-        UPDATE store_artworks
-        SET stock_quantity = GREATEST(stock_quantity - ?, 0)
-        WHERE artwork_id = ?
-        `,
-        [item.quantity, item.artwork.artwork_id]
       );
     }
 
-    await connection.commit();
-
     return NextResponse.json({
-  success: true,
-  order: {
-    id: orderId,
-    orderNumber,
-    subtotal,
-    shippingFee,
-    taxAmount,
-    totalAmount,
-    paymentMethod,
-    paymentMethodLabel: getPaymentLabel(paymentMethod),
-    paymentStatus: "pending",
-    orderStatus: "pending",
-  },
-  message: getPaymentMessage(paymentMethod),
-});
+      success: true,
+      message: "Order placed successfully.",
+      order_id: orderId,
+      orderId,
+      order_number: orderNumber,
+      orderNumber,
+      payment_method: paymentMethod,
+      payment_label: getPaymentLabel(paymentMethod),
+      total_amount: totalAmount,
+    });
   } catch (error) {
-    await connection.rollback();
+    console.error("Checkout POST error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Unable to place order.",
+        error: "Unable to place order.",
       },
-      { status: 400 }
+      { status: 500 }
     );
-  } finally {
-    connection.release();
   }
 }
