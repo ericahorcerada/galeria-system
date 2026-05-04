@@ -60,6 +60,34 @@ function readStoredUser(): LoggedUser | null {
   }
 }
 
+function readCartCount() {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+
+  try {
+    const cart = localStorage.getItem("galeria_cart");
+
+    if (!cart) {
+      return 0;
+    }
+
+    const parsed = JSON.parse(cart);
+
+    if (Array.isArray(parsed)) {
+      return parsed.length;
+    }
+
+    if (Array.isArray(parsed.items)) {
+      return parsed.items.length;
+    }
+
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function Header() {
   const pathname = usePathname();
 
@@ -67,6 +95,15 @@ export function Header() {
   const [isDark, setIsDark] = useState(false);
   const [user, setUser] = useState<LoggedUser | null>(null);
   const [cartCount, setCartCount] = useState(0);
+
+  const isLoginPage = pathname === "/login";
+
+  /*
+    IMPORTANT:
+    On /login, NEVER show Dashboard.
+    Even if old localStorage or old session exists, login page should show login icon.
+  */
+  const visibleUser = isLoginPage ? null : user;
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
@@ -81,31 +118,7 @@ export function Header() {
   useEffect(() => {
     function refreshHeaderState() {
       setUser(readStoredUser());
-
-      try {
-        const cart = localStorage.getItem("galeria_cart");
-
-        if (!cart) {
-          setCartCount(0);
-          return;
-        }
-
-        const parsed = JSON.parse(cart);
-
-        if (Array.isArray(parsed)) {
-          setCartCount(parsed.length);
-          return;
-        }
-
-        if (Array.isArray(parsed.items)) {
-          setCartCount(parsed.items.length);
-          return;
-        }
-
-        setCartCount(0);
-      } catch {
-        setCartCount(0);
-      }
+      setCartCount(readCartCount());
     }
 
     refreshHeaderState();
@@ -130,9 +143,9 @@ export function Header() {
   };
 
   const dashboardHref =
-    user?.role === "admin"
+    visibleUser?.role === "admin"
       ? "/admin"
-      : user?.role === "staff"
+      : visibleUser?.role === "staff"
         ? "/staff"
         : "/customer/dashboard";
 
@@ -194,7 +207,7 @@ export function Header() {
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
 
-          {user ? (
+          {visibleUser ? (
             <Link
               href={dashboardHref}
               className="hidden rounded-full border border-border px-3 py-1.5 text-xs font-bold text-foreground transition hover:border-primary hover:text-primary sm:inline-flex"
@@ -270,7 +283,7 @@ export function Header() {
               );
             })}
 
-            {user ? (
+            {visibleUser ? (
               <Link
                 href={dashboardHref}
                 onClick={() => setIsOpen(false)}
