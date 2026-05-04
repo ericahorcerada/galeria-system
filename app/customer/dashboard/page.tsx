@@ -45,6 +45,7 @@ type CustomerOrder = {
 type CustomerFeedback = {
   feedback_id?: number;
   id?: number;
+  artwork_id?: number;
   customer_name?: string;
   name?: string;
   email?: string;
@@ -126,10 +127,8 @@ export default function CustomerDashboardPage() {
 
           setUser(googleUser);
 
-          if (typeof window !== "undefined") {
-            localStorage.setItem("galeria_user", JSON.stringify(googleUser));
-            window.dispatchEvent(new Event("galeria-auth-change"));
-          }
+          localStorage.setItem("galeria_user", JSON.stringify(googleUser));
+          window.dispatchEvent(new Event("galeria-auth-change"));
 
           return;
         }
@@ -150,10 +149,8 @@ export default function CustomerDashboardPage() {
           if (authUser.role === "customer") {
             setUser(authUser);
 
-            if (typeof window !== "undefined") {
-              localStorage.setItem("galeria_user", JSON.stringify(authUser));
-              window.dispatchEvent(new Event("galeria-auth-change"));
-            }
+            localStorage.setItem("galeria_user", JSON.stringify(authUser));
+            window.dispatchEvent(new Event("galeria-auth-change"));
 
             return;
           }
@@ -162,24 +159,22 @@ export default function CustomerDashboardPage() {
         // Continue to fallback below.
       }
 
-      if (typeof window !== "undefined") {
-        const stored = localStorage.getItem("galeria_user");
+      const stored = localStorage.getItem("galeria_user");
 
-        if (stored) {
-          try {
-            const storedUser = JSON.parse(stored) as CustomerUser;
+      if (stored) {
+        try {
+          const storedUser = JSON.parse(stored) as CustomerUser;
 
-            if (storedUser.role === "customer") {
-              setUser(storedUser);
-              return;
-            }
-
-            localStorage.removeItem("galeria_user");
-            window.dispatchEvent(new Event("galeria-auth-change"));
-          } catch {
-            localStorage.removeItem("galeria_user");
-            window.dispatchEvent(new Event("galeria-auth-change"));
+          if (storedUser.role === "customer") {
+            setUser(storedUser);
+            return;
           }
+
+          localStorage.removeItem("galeria_user");
+          window.dispatchEvent(new Event("galeria-auth-change"));
+        } catch {
+          localStorage.removeItem("galeria_user");
+          window.dispatchEvent(new Event("galeria-auth-change"));
         }
       }
 
@@ -219,15 +214,15 @@ export default function CustomerDashboardPage() {
       setIsLoadingFeedback(true);
 
       try {
-        const response = await fetch("/api/feedback", {
+        const response = await fetch("/api/artwork-feedback", {
           cache: "no-store",
         });
 
         const result = await response.json();
 
         const feedbackList =
-          result.feedback ||
           result.feedbacks ||
+          result.feedback ||
           result.data ||
           result.results ||
           result.items ||
@@ -275,16 +270,7 @@ export default function CustomerDashboardPage() {
     );
   });
 
-  const myFeedbacks = feedbacks.filter((feedback) => {
-    const feedbackEmail = String(feedback.email || "").toLowerCase();
-    const currentEmail = String(displayEmail || "").toLowerCase();
-
-    if (!feedbackEmail || !currentEmail || currentEmail === "google account") {
-      return true;
-    }
-
-    return feedbackEmail === currentEmail;
-  });
+  const myFeedbacks = feedbacks;
 
   const handleLogout = async () => {
     try {
@@ -295,11 +281,9 @@ export default function CustomerDashboardPage() {
       // Continue logout cleanup.
     }
 
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("galeria_user");
-      window.dispatchEvent(new Event("galeria-auth-change"));
-      window.location.href = "/login";
-    }
+    localStorage.removeItem("galeria_user");
+    window.dispatchEvent(new Event("galeria-auth-change"));
+    window.location.href = "/login";
   };
 
   return (
@@ -509,17 +493,17 @@ export default function CustomerDashboardPage() {
         <section className="rounded-[1.5rem] border border-border bg-card p-6 shadow-sm">
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-black">My Feedback</h2>
+              <h2 className="text-2xl font-black">My Artwork Ratings & Feedback</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                See feedback you sent to the gallery.
+                Ratings and feedback submitted on artworks.
               </p>
             </div>
 
             <Link
-              href="/feedback"
+              href="/shop"
               className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
             >
-              Write Feedback
+              Rate an Artwork
             </Link>
           </div>
 
@@ -531,24 +515,26 @@ export default function CustomerDashboardPage() {
             <div className="rounded-xl bg-muted p-5 text-center">
               <MessageSquare className="mx-auto mb-3 h-10 w-10 text-primary" />
 
-              <p className="font-bold">No feedback yet.</p>
+              <p className="font-bold">No artwork feedback yet.</p>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                Send your first message, review, or suggestion to the gallery.
+                Open an artwork, then submit your rating and feedback.
               </p>
 
               <Link
-                href="/feedback"
+                href="/shop"
                 className="mt-4 inline-flex rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
               >
-                Send Feedback
+                Browse Artworks
               </Link>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {myFeedbacks.slice(0, 4).map((feedback) => {
+              {myFeedbacks.slice(0, 8).map((feedback) => {
                 const feedbackId =
-                  feedback.feedback_id || feedback.id || feedback.message;
+                  feedback.feedback_id ||
+                  feedback.id ||
+                  `${feedback.email}-${feedback.message}-${feedback.created_at}`;
 
                 return (
                   <div
@@ -556,9 +542,19 @@ export default function CustomerDashboardPage() {
                     className="rounded-2xl border border-border bg-background p-5"
                   >
                     <div className="mb-3 flex items-center justify-between gap-4">
-                      <p className="font-black">
-                        {feedback.subject || "Gallery Feedback"}
-                      </p>
+                      <div>
+                        <p className="font-black">
+                          {feedback.subject ||
+                            (feedback.artwork_id
+                              ? `Artwork #${feedback.artwork_id}`
+                              : "Artwork Feedback")}
+                        </p>
+
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {feedback.customer_name || feedback.name || "Customer"} •{" "}
+                          {getFeedbackDate(feedback)}
+                        </p>
+                      </div>
 
                       {feedback.rating ? (
                         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
@@ -572,10 +568,18 @@ export default function CustomerDashboardPage() {
                     </p>
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-                      <span>{getFeedbackDate(feedback)}</span>
                       <span className="capitalize">
                         {feedback.status || "Submitted"}
                       </span>
+
+                      {feedback.artwork_id ? (
+                        <Link
+                          href={`/artwork/${feedback.artwork_id}`}
+                          className="font-bold text-primary hover:underline"
+                        >
+                          View Artwork
+                        </Link>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -614,11 +618,11 @@ export default function CustomerDashboardPage() {
               </Link>
 
               <Link
-                href="/feedback"
+                href="/shop"
                 className="rounded-2xl bg-muted p-6 text-center transition hover:-translate-y-1 hover:bg-primary hover:text-primary-foreground"
               >
                 <MessageSquare className="mx-auto mb-4 h-8 w-8" />
-                <p className="font-bold">Feedback</p>
+                <p className="font-bold">Rate Artworks</p>
               </Link>
             </div>
           </div>
