@@ -60,32 +60,64 @@ function readStoredUser(): LoggedUser | null {
   }
 }
 
-function readCartCount() {
-  if (typeof window === "undefined") {
+function countCartItemsFromValue(value: string | null) {
+  if (!value) {
     return 0;
   }
 
   try {
-    const cart = localStorage.getItem("galeria_cart");
-
-    if (!cart) {
-      return 0;
-    }
-
-    const parsed = JSON.parse(cart);
+    const parsed = JSON.parse(value);
 
     if (Array.isArray(parsed)) {
-      return parsed.length;
+      return parsed.reduce((total, item) => {
+        const quantity = Number(item?.quantity || item?.qty || 1);
+        return total + (Number.isFinite(quantity) && quantity > 0 ? quantity : 1);
+      }, 0);
     }
 
     if (Array.isArray(parsed.items)) {
-      return parsed.items.length;
+      return parsed.items.reduce((total: number, item: any) => {
+        const quantity = Number(item?.quantity || item?.qty || 1);
+        return total + (Number.isFinite(quantity) && quantity > 0 ? quantity : 1);
+      }, 0);
+    }
+
+    if (typeof parsed.count === "number") {
+      return parsed.count;
+    }
+
+    if (typeof parsed.totalItems === "number") {
+      return parsed.totalItems;
     }
 
     return 0;
   } catch {
     return 0;
   }
+}
+
+function readCartCount() {
+  if (typeof window === "undefined") {
+    return 0;
+  }
+
+  const possibleCartKeys = [
+    "galeria_cart",
+    "cart",
+    "galeriaCart",
+    "artspace_cart",
+    "shopping_cart",
+  ];
+
+  for (const key of possibleCartKeys) {
+    const count = countCartItemsFromValue(localStorage.getItem(key));
+
+    if (count > 0) {
+      return count;
+    }
+  }
+
+  return 0;
 }
 
 export function Header() {
@@ -97,12 +129,6 @@ export function Header() {
   const [cartCount, setCartCount] = useState(0);
 
   const isLoginPage = pathname === "/login";
-
-  /*
-    IMPORTANT:
-    On /login, NEVER show Dashboard.
-    Even if old localStorage or old session exists, login page should show login icon.
-  */
   const visibleUser = isLoginPage ? null : user;
 
   useEffect(() => {
@@ -123,14 +149,21 @@ export function Header() {
 
     refreshHeaderState();
 
+    const interval = window.setInterval(refreshHeaderState, 1000);
+
     window.addEventListener("storage", refreshHeaderState);
     window.addEventListener("focus", refreshHeaderState);
+    window.addEventListener("click", refreshHeaderState);
     window.addEventListener("galeria-auth-change", refreshHeaderState);
+    window.addEventListener("galeria-cart-change", refreshHeaderState);
 
     return () => {
+      window.clearInterval(interval);
       window.removeEventListener("storage", refreshHeaderState);
       window.removeEventListener("focus", refreshHeaderState);
+      window.removeEventListener("click", refreshHeaderState);
       window.removeEventListener("galeria-auth-change", refreshHeaderState);
+      window.removeEventListener("galeria-cart-change", refreshHeaderState);
     };
   }, [pathname]);
 
@@ -226,14 +259,14 @@ export function Header() {
 
           <Link
             href="/cart"
-            className="relative text-foreground transition hover:text-primary"
+            className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground transition hover:bg-muted hover:text-primary"
             aria-label="Cart"
           >
             <ShoppingBag className="h-5 w-5" />
 
             {cartCount > 0 && (
-              <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[0.65rem] font-bold text-primary-foreground">
-                {cartCount}
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[0.65rem] font-black leading-none text-white shadow-lg ring-2 ring-background">
+                {cartCount > 99 ? "99+" : cartCount}
               </span>
             )}
           </Link>

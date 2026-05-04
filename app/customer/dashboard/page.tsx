@@ -6,6 +6,7 @@ import {
   Bell,
   Gift,
   LogOut,
+  MessageSquare,
   Package,
   ReceiptText,
   ShoppingBag,
@@ -41,6 +42,19 @@ type CustomerOrder = {
   created_at?: string;
 };
 
+type CustomerFeedback = {
+  feedback_id?: number;
+  id?: number;
+  customer_name?: string;
+  name?: string;
+  email?: string;
+  subject?: string;
+  message?: string;
+  rating?: number;
+  status?: string;
+  created_at?: string;
+};
+
 type NextAuthSession = {
   user?: {
     name?: string | null;
@@ -73,11 +87,21 @@ function formatMoney(value?: number) {
   }).format(amount);
 }
 
+function getFeedbackDate(feedback: CustomerFeedback) {
+  if (!feedback.created_at) {
+    return "Date unavailable";
+  }
+
+  return new Date(feedback.created_at).toLocaleDateString();
+}
+
 export default function CustomerDashboardPage() {
   const [user, setUser] = useState<CustomerUser | null>(null);
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [feedbacks, setFeedbacks] = useState<CustomerFeedback[]>([]);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState(true);
 
   useEffect(() => {
     async function loadUser() {
@@ -104,6 +128,7 @@ export default function CustomerDashboardPage() {
 
           if (typeof window !== "undefined") {
             localStorage.setItem("galeria_user", JSON.stringify(googleUser));
+            window.dispatchEvent(new Event("galeria-auth-change"));
           }
 
           return;
@@ -127,6 +152,7 @@ export default function CustomerDashboardPage() {
 
             if (typeof window !== "undefined") {
               localStorage.setItem("galeria_user", JSON.stringify(authUser));
+              window.dispatchEvent(new Event("galeria-auth-change"));
             }
 
             return;
@@ -149,8 +175,10 @@ export default function CustomerDashboardPage() {
             }
 
             localStorage.removeItem("galeria_user");
+            window.dispatchEvent(new Event("galeria-auth-change"));
           } catch {
             localStorage.removeItem("galeria_user");
+            window.dispatchEvent(new Event("galeria-auth-change"));
           }
         }
       }
@@ -162,8 +190,6 @@ export default function CustomerDashboardPage() {
         email: "Google Account",
         identifier: "Google Account",
       });
-
-      setIsLoadingUser(false);
     }
 
     async function loadOrders() {
@@ -189,8 +215,37 @@ export default function CustomerDashboardPage() {
       }
     }
 
+    async function loadFeedback() {
+      setIsLoadingFeedback(true);
+
+      try {
+        const response = await fetch("/api/feedback", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        const feedbackList =
+          result.feedback ||
+          result.feedbacks ||
+          result.data ||
+          result.results ||
+          result.items ||
+          [];
+
+        if (Array.isArray(feedbackList)) {
+          setFeedbacks(feedbackList);
+        }
+      } catch {
+        setFeedbacks([]);
+      } finally {
+        setIsLoadingFeedback(false);
+      }
+    }
+
     loadUser().finally(() => setIsLoadingUser(false));
     loadOrders();
+    loadFeedback();
   }, []);
 
   const displayName = getDisplayName(user);
@@ -220,15 +275,18 @@ export default function CustomerDashboardPage() {
     );
   });
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/signout", {
-        method: "POST",
-      });
-    } catch {
-      // Continue logout cleanup.
+  const myFeedbacks = feedbacks.filter((feedback) => {
+    const feedbackEmail = String(feedback.email || "").toLowerCase();
+    const currentEmail = String(displayEmail || "").toLowerCase();
+
+    if (!feedbackEmail || !currentEmail || currentEmail === "google account") {
+      return true;
     }
 
+    return feedbackEmail === currentEmail;
+  });
+
+  const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
@@ -239,6 +297,7 @@ export default function CustomerDashboardPage() {
 
     if (typeof window !== "undefined") {
       localStorage.removeItem("galeria_user");
+      window.dispatchEvent(new Event("galeria-auth-change"));
       window.location.href = "/login";
     }
   };
@@ -447,6 +506,84 @@ export default function CustomerDashboardPage() {
           </div>
         </section>
 
+        <section className="rounded-[1.5rem] border border-border bg-card p-6 shadow-sm">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-black">My Feedback</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                See feedback you sent to the gallery.
+              </p>
+            </div>
+
+            <Link
+              href="/feedback"
+              className="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
+            >
+              Write Feedback
+            </Link>
+          </div>
+
+          {isLoadingFeedback ? (
+            <p className="text-sm text-muted-foreground">
+              Loading your feedback...
+            </p>
+          ) : myFeedbacks.length === 0 ? (
+            <div className="rounded-xl bg-muted p-5 text-center">
+              <MessageSquare className="mx-auto mb-3 h-10 w-10 text-primary" />
+
+              <p className="font-bold">No feedback yet.</p>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                Send your first message, review, or suggestion to the gallery.
+              </p>
+
+              <Link
+                href="/feedback"
+                className="mt-4 inline-flex rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition hover:opacity-90"
+              >
+                Send Feedback
+              </Link>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {myFeedbacks.slice(0, 4).map((feedback) => {
+                const feedbackId =
+                  feedback.feedback_id || feedback.id || feedback.message;
+
+                return (
+                  <div
+                    key={String(feedbackId)}
+                    className="rounded-2xl border border-border bg-background p-5"
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-4">
+                      <p className="font-black">
+                        {feedback.subject || "Gallery Feedback"}
+                      </p>
+
+                      {feedback.rating ? (
+                        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                          {feedback.rating}/5
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      {feedback.message || "No message content."}
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+                      <span>{getFeedbackDate(feedback)}</span>
+                      <span className="capitalize">
+                        {feedback.status || "Submitted"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
         <section className="grid gap-8 lg:grid-cols-2">
           <div className="rounded-[1.5rem] border border-border bg-card p-6 shadow-sm">
             <h2 className="mb-6 text-2xl font-black">My Gallery Tools</h2>
@@ -480,7 +617,7 @@ export default function CustomerDashboardPage() {
                 href="/feedback"
                 className="rounded-2xl bg-muted p-6 text-center transition hover:-translate-y-1 hover:bg-primary hover:text-primary-foreground"
               >
-                <Bell className="mx-auto mb-4 h-8 w-8" />
+                <MessageSquare className="mx-auto mb-4 h-8 w-8" />
                 <p className="font-bold">Feedback</p>
               </Link>
             </div>
