@@ -40,6 +40,25 @@ type CheckoutForm = {
   notes: string;
 };
 
+const paymentOptions = [
+  {
+    label: "Cash on Delivery",
+    value: "cash_on_delivery",
+  },
+  {
+    label: "GCash",
+    value: "gcash",
+  },
+  {
+    label: "Bank Transfer",
+    value: "bank_transfer",
+  },
+  {
+    label: "Pay at Gallery",
+    value: "pay_at_gallery",
+  },
+];
+
 function getItemId(item: CartItem) {
   return Number(item.artwork_id || item.artworkId || item.id || 0);
 }
@@ -157,6 +176,12 @@ function getUserEmail(user: StoredUser) {
   return user.email || user.identifier || "";
 }
 
+function getPaymentLabel(value: string) {
+  return (
+    paymentOptions.find((option) => option.value === value)?.label || value
+  );
+}
+
 export default function CheckoutPage() {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -171,7 +196,7 @@ export default function CheckoutPage() {
     phone: "",
     address: "",
     city: "Butuan City",
-    paymentMethod: "Cash on Delivery",
+    paymentMethod: "cash_on_delivery",
     notes: "",
   });
 
@@ -221,6 +246,7 @@ export default function CheckoutPage() {
     const address = form.address.trim();
     const city = form.city.trim();
     const notes = form.notes.trim();
+    const paymentLabel = getPaymentLabel(form.paymentMethod);
 
     if (items.length === 0) {
       setError("Your cart is empty.");
@@ -229,6 +255,11 @@ export default function CheckoutPage() {
 
     if (!fullName || !email || !phone || !address || !city) {
       setError("Complete contact and shipping details are required.");
+      return;
+    }
+
+    if (!form.paymentMethod) {
+      setError("Payment method is required.");
       return;
     }
 
@@ -302,6 +333,8 @@ export default function CheckoutPage() {
 
         payment_method: form.paymentMethod,
         paymentMethod: form.paymentMethod,
+        payment_label: paymentLabel,
+        paymentLabel,
 
         notes,
         order_notes: notes,
@@ -588,23 +621,18 @@ export default function CheckoutPage() {
                 <h2 className="text-2xl font-black">Payment Method</h2>
 
                 <div className="mt-6 grid gap-3 md:grid-cols-2">
-                  {[
-                    "Cash on Delivery",
-                    "GCash",
-                    "Bank Transfer",
-                    "Pay at Gallery",
-                  ].map((method) => (
+                  {paymentOptions.map((method) => (
                     <button
-                      key={method}
+                      key={method.value}
                       type="button"
-                      onClick={() => updateForm("paymentMethod", method)}
+                      onClick={() => updateForm("paymentMethod", method.value)}
                       className={`rounded-xl border px-4 py-4 text-left text-sm font-black transition ${
-                        form.paymentMethod === method
+                        form.paymentMethod === method.value
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-border bg-background hover:bg-muted"
                       }`}
                     >
-                      {method}
+                      {method.label}
                     </button>
                   ))}
                 </div>
