@@ -8,6 +8,7 @@ import { Footer } from "@/components/landing/footer";
 
 type CartItem = {
   artwork_id?: number;
+  artworkId?: number;
   id?: number;
   title?: string;
   artwork_title?: string;
@@ -40,7 +41,7 @@ type CheckoutForm = {
 };
 
 function getItemId(item: CartItem) {
-  return Number(item.artwork_id || item.id || 0);
+  return Number(item.artwork_id || item.artworkId || item.id || 0);
 }
 
 function getItemTitle(item: CartItem) {
@@ -67,6 +68,7 @@ function normalizeCartItems(items: CartItem[]) {
   return items
     .map((item) => ({
       artwork_id: getItemId(item),
+      artworkId: getItemId(item),
       id: getItemId(item),
       title: getItemTitle(item),
       artwork_title: getItemTitle(item),
@@ -78,6 +80,7 @@ function normalizeCartItems(items: CartItem[]) {
         "https://images.unsplash.com/photo-1541961017774-22349e4a1262?q=80&w=800&auto=format&fit=crop",
       price: getItemPrice(item),
       quantity: getItemQuantity(item),
+      qty: getItemQuantity(item),
     }))
     .filter((item) => item.artwork_id > 0);
 }
@@ -87,27 +90,45 @@ function readCartFromStorage() {
     return [];
   }
 
-  try {
-    const stored = localStorage.getItem("galeria_cart");
+  const possibleKeys = [
+    "galeria_cart",
+    "cart",
+    "galeriaCart",
+    "artspace_cart",
+    "shopping_cart",
+  ];
 
-    if (!stored) {
-      return [];
+  for (const key of possibleKeys) {
+    try {
+      const stored = localStorage.getItem(key);
+
+      if (!stored) {
+        continue;
+      }
+
+      const parsed = JSON.parse(stored);
+
+      if (Array.isArray(parsed)) {
+        const normalized = normalizeCartItems(parsed);
+
+        if (normalized.length > 0) {
+          return normalized;
+        }
+      }
+
+      if (Array.isArray(parsed.items)) {
+        const normalized = normalizeCartItems(parsed.items);
+
+        if (normalized.length > 0) {
+          return normalized;
+        }
+      }
+    } catch {
+      // Try next cart key.
     }
-
-    const parsed = JSON.parse(stored);
-
-    if (Array.isArray(parsed)) {
-      return normalizeCartItems(parsed);
-    }
-
-    if (Array.isArray(parsed.items)) {
-      return normalizeCartItems(parsed.items);
-    }
-
-    return [];
-  } catch {
-    return [];
   }
+
+  return [];
 }
 
 function readStoredUser(): StoredUser {
@@ -194,28 +215,20 @@ export default function CheckoutPage() {
     setError("");
     setSuccessMessage("");
 
+    const fullName = form.fullName.trim();
+    const email = form.email.trim();
+    const phone = form.phone.trim();
+    const address = form.address.trim();
+    const city = form.city.trim();
+    const notes = form.notes.trim();
+
     if (items.length === 0) {
       setError("Your cart is empty.");
       return;
     }
 
-    if (!form.fullName.trim()) {
-      setError("Full name is required.");
-      return;
-    }
-
-    if (!form.email.trim()) {
-      setError("Email is required.");
-      return;
-    }
-
-    if (!form.phone.trim()) {
-      setError("Phone number is required.");
-      return;
-    }
-
-    if (!form.address.trim()) {
-      setError("Delivery address is required.");
+    if (!fullName || !email || !phone || !address || !city) {
+      setError("Complete contact and shipping details are required.");
       return;
     }
 
@@ -224,25 +237,116 @@ export default function CheckoutPage() {
     try {
       const generatedOrderNumber = `GM-${Date.now()}`;
 
+      const mappedItems = items.map((item) => {
+        const artworkId = getItemId(item);
+        const title = getItemTitle(item);
+        const price = getItemPrice(item);
+        const quantity = getItemQuantity(item);
+        const lineSubtotal = price * quantity;
+
+        return {
+          artwork_id: artworkId,
+          artworkId,
+          id: artworkId,
+          product_id: artworkId,
+          productId: artworkId,
+
+          title,
+          name: title,
+          artwork_title: title,
+
+          price,
+          unit_price: price,
+          unitPrice: price,
+
+          quantity,
+          qty: quantity,
+
+          subtotal: lineSubtotal,
+          line_total: lineSubtotal,
+          lineTotal: lineSubtotal,
+        };
+      });
+
       const payload = {
         order_number: generatedOrderNumber,
-        customer_name: form.fullName.trim(),
-        customer_email: form.email.trim(),
-        customer_phone: form.phone.trim(),
-        delivery_address: form.address.trim(),
-        city: form.city.trim(),
+        orderNumber: generatedOrderNumber,
+
+        customer_name: fullName,
+        customerName: fullName,
+        full_name: fullName,
+        fullName,
+        name: fullName,
+
+        customer_email: email,
+        customerEmail: email,
+        email,
+
+        customer_phone: phone,
+        customerPhone: phone,
+        phone,
+        phone_number: phone,
+        phoneNumber: phone,
+        contact_number: phone,
+        contactNumber: phone,
+
+        delivery_address: address,
+        deliveryAddress: address,
+        shipping_address: address,
+        shippingAddress: address,
+        address,
+
+        city,
+        shipping_city: city,
+        shippingCity: city,
+
         payment_method: form.paymentMethod,
-        notes: form.notes.trim(),
+        paymentMethod: form.paymentMethod,
+
+        notes,
+        order_notes: notes,
+        orderNotes: notes,
+
         total_amount: subtotal,
+        totalAmount: subtotal,
+        total: subtotal,
+        subtotal,
+
         status: "pending",
+        order_status: "pending",
+        orderStatus: "pending",
+
         payment_status: "unpaid",
-        items: items.map((item) => ({
-          artwork_id: getItemId(item),
-          title: getItemTitle(item),
-          price: getItemPrice(item),
-          quantity: getItemQuantity(item),
-          subtotal: getItemPrice(item) * getItemQuantity(item),
-        })),
+        paymentStatus: "unpaid",
+
+        items: mappedItems,
+        order_items: mappedItems,
+        orderItems: mappedItems,
+
+        customer: {
+          name: fullName,
+          fullName,
+          full_name: fullName,
+          email,
+          phone,
+          phoneNumber: phone,
+          phone_number: phone,
+        },
+
+        shipping: {
+          address,
+          deliveryAddress: address,
+          delivery_address: address,
+          shippingAddress: address,
+          shipping_address: address,
+          city,
+        },
+
+        contact: {
+          name: fullName,
+          email,
+          phone,
+        },
       };
 
       const response = await fetch("/api/checkout", {
@@ -269,9 +373,15 @@ export default function CheckoutPage() {
         result.order_number ||
         result.orderNumber ||
         result.order?.order_number ||
+        result.order?.orderNumber ||
         generatedOrderNumber;
 
       localStorage.removeItem("galeria_cart");
+      localStorage.removeItem("cart");
+      localStorage.removeItem("galeriaCart");
+      localStorage.removeItem("artspace_cart");
+      localStorage.removeItem("shopping_cart");
+
       window.dispatchEvent(new Event("galeria-cart-change"));
 
       setItems([]);
@@ -379,6 +489,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       Full Name
                     </label>
+
                     <input
                       value={form.fullName}
                       onChange={(event) =>
@@ -393,6 +504,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       Email
                     </label>
+
                     <input
                       value={form.email}
                       onChange={(event) =>
@@ -408,6 +520,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       Phone Number
                     </label>
+
                     <input
                       value={form.phone}
                       onChange={(event) =>
@@ -422,6 +535,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       City
                     </label>
+
                     <input
                       value={form.city}
                       onChange={(event) =>
@@ -442,6 +556,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       Delivery Address
                     </label>
+
                     <textarea
                       value={form.address}
                       onChange={(event) =>
@@ -456,6 +571,7 @@ export default function CheckoutPage() {
                     <label className="mb-2 block text-sm font-bold">
                       Notes
                     </label>
+
                     <textarea
                       value={form.notes}
                       onChange={(event) =>
@@ -518,6 +634,7 @@ export default function CheckoutPage() {
                     >
                       <div>
                         <p className="font-bold">{title}</p>
+
                         <p className="text-sm text-muted-foreground">
                           Qty: {quantity}
                         </p>
